@@ -2,10 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { apiClient } from "@/lib/api-client";
-import { Item, ItemListResponse } from "@/types/item";
+import { fetchItems } from "@/lib/api/items";
+import { Item } from "@/types/item";
+import { ItemCard } from "@/components/item/ItemCard";
 
 const itemSchema = z.object({
   title: z.string().min(1, "Title is required").max(120),
@@ -24,12 +27,9 @@ type ItemForm = z.infer<typeof itemSchema>;
 export default function Home() {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError } = useQuery<ItemListResponse>({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["items"],
-    queryFn: async () => {
-      const res = await apiClient.get<ItemListResponse>("/items");
-      return res.data;
-    },
+    queryFn: fetchItems,
   });
 
   const {
@@ -195,37 +195,7 @@ export default function Home() {
               <p className="text-sm text-neutral-500">No items yet.</p>
             )}
             {data?.items.map((item) => (
-              <article
-                key={item.id}
-                className="rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-base font-semibold text-neutral-900">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs text-neutral-500">
-                      #{item.id} · {new Date(item.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold text-neutral-800">
-                    ¥{item.price.toLocaleString()}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-neutral-700">
-                  {item.description}
-                </p>
-                {item.imageUrl ? (
-                  <a
-                    href={item.imageUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 inline-flex text-xs font-medium text-neutral-700 underline"
-                  >
-                    View image
-                  </a>
-                ) : null}
-              </article>
+              <ItemCard key={item.id} item={item} />
             ))}
           </div>
         </section>
