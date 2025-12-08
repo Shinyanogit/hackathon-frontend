@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { apiClient } from "@/lib/api-client";
@@ -13,13 +12,12 @@ import { ItemCard } from "@/components/item/ItemCard";
 const itemSchema = z.object({
   title: z.string().min(1, "Title is required").max(120),
   description: z.string().min(1, "Description is required"),
-  price: z.coerce.number().int().min(0, "Price must be >= 0"),
+  price: z.coerce.number().min(0, "Price must be >= 0"),
   imageUrl: z
     .string()
     .url("Must be a valid URL")
     .optional()
-    .or(z.literal(""))
-    .transform((val) => (val === "" ? undefined : val)),
+    .or(z.literal("")),
 });
 
 type ItemForm = z.infer<typeof itemSchema>;
