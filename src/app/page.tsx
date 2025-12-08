@@ -13,14 +13,11 @@ const itemSchema = z.object({
   title: z.string().min(1, "Title is required").max(120),
   description: z.string().min(1, "Description is required"),
   price: z.coerce.number().min(0, "Price must be >= 0"),
-  imageUrl: z
-    .string()
-    .url("Must be a valid URL")
-    .optional()
-    .or(z.literal("")),
+  imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
 });
 
 type ItemForm = z.infer<typeof itemSchema>;
+type ItemFormInput = z.input<typeof itemSchema>;
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -35,7 +32,7 @@ export default function Home() {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<ItemForm>({
+  } = useForm<ItemFormInput, unknown, ItemForm>({
     resolver: zodResolver(itemSchema),
     defaultValues: {
       title: "",
@@ -89,7 +86,7 @@ export default function Home() {
                 Minimal fields to prove create → list → detail.
               </p>
             </div>
-            {createItem.isLoading ? (
+            {createItem.isPending ? (
               <span className="text-xs text-neutral-500">Saving...</span>
             ) : null}
           </div>
@@ -161,9 +158,9 @@ export default function Home() {
             <button
               type="submit"
               className="inline-flex w-full items-center justify-center rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-neutral-800 sm:w-auto"
-              disabled={createItem.isLoading}
+              disabled={createItem.isPending}
             >
-              {createItem.isLoading ? "Creating..." : "Create item"}
+              {createItem.isPending ? "Creating..." : "Create item"}
             </button>
             {createItem.isError ? (
               <p className="text-sm text-red-600">
