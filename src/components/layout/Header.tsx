@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { AuthButton } from "@/components/auth/AuthButton";
+import { useAuth } from "@/context/AuthContext";
 
 type Props = {
   onSearch?: (query: string) => void;
@@ -11,7 +13,6 @@ type Props = {
   brandName: string;
   brandTagline: string;
   navLinks: { href: string; label: string }[];
-  loginLabel: string;
   signupLabel: string;
   searchPlaceholder: string;
 };
@@ -23,10 +24,11 @@ export function Header({
   brandName,
   brandTagline,
   navLinks,
-  loginLabel,
   signupLabel,
   searchPlaceholder,
 }: Props) {
+  const { user } = useAuth();
+
   return (
     <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:gap-6">
@@ -50,18 +52,15 @@ export function Header({
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Link
-            href="/login"
-            className="hidden rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-emerald-200 hover:text-emerald-700 sm:inline-flex"
-          >
-            {loginLabel}
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-          >
-            {signupLabel}
-          </Link>
+          {!user && (
+            <Link
+              href="/signup"
+              className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              {signupLabel}
+            </Link>
+          )}
+          <AuthButton />
           <LanguageToggle value={locale} onChange={onLocaleChange} />
         </div>
       </div>

@@ -31,7 +31,6 @@ const copy: Record<
     brandName: string;
     brandTagline: string;
     navLinks: { href: string; label: string }[];
-    loginLabel: string;
     signupLabel: string;
     searchPlaceholder: string;
     hero: {
@@ -73,7 +72,6 @@ const copy: Record<
       { href: "/men", label: "メンズ" },
       { href: "/kids", label: "キッズ" },
     ],
-    loginLabel: "ログイン",
     signupLabel: "新規登録",
     searchPlaceholder: "アイテム名、ブランド、サイズで検索",
     hero: {
@@ -147,7 +145,6 @@ const copy: Record<
       { href: "/men", label: "Men" },
       { href: "/kids", label: "Kids" },
     ],
-    loginLabel: "Log in",
     signupLabel: "Sign up",
     searchPlaceholder: "Search items, brands, sizes",
     hero: {
@@ -348,7 +345,6 @@ export default function Home() {
         brandName={t.brandName}
         brandTagline={t.brandTagline}
         navLinks={t.navLinks}
-        loginLabel={t.loginLabel}
         signupLabel={t.signupLabel}
         searchPlaceholder={t.searchPlaceholder}
       />
