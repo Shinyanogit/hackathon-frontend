@@ -1,12 +1,10 @@
-import { apiClient } from "@/lib/api-client";
+import { apiClient } from "@/lib/apiClient";
 import { Item, ItemListResponse } from "@/types/item";
 
 export async function fetchItems() {
-  const res = await apiClient.get<ItemListResponse>("/items");
-  return res.data;
+  return apiClient.get<ItemListResponse>("/items");
 }
 
 export async function fetchItem(id: number | string) {
-  const res = await apiClient.get<Item>(`/items/${id}`);
-  return res.data;
+  return apiClient.get<Item>(`/items/${id}`);
 }
