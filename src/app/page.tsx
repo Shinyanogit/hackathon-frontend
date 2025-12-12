@@ -30,7 +30,7 @@ const copy: Record<
   {
     brandName: string;
     brandTagline: string;
-    navLinks: { href: string; label: string }[];
+    navLinks: { href: string; label: string; icon: "compass" | "jacket" | "dress" | "toy" }[];
     signupLabel: string;
     searchPlaceholder: string;
     hero: {
@@ -67,10 +67,10 @@ const copy: Record<
     brandName: "Fleamint",
     brandTagline: "プレラブドマーケット",
     navLinks: [
-      { href: "/explore", label: "見つける" },
-      { href: "/women", label: "レディース" },
-      { href: "/men", label: "メンズ" },
-      { href: "/kids", label: "キッズ" },
+      { href: "/explore", label: "見つける", icon: "compass" },
+      { href: "/men", label: "メンズ", icon: "jacket" },
+      { href: "/women", label: "レディース", icon: "dress" },
+      { href: "/kids", label: "キッズ", icon: "toy" },
     ],
     signupLabel: "新規登録",
     searchPlaceholder: "アイテム名、ブランド、サイズで検索",
@@ -140,10 +140,10 @@ const copy: Record<
     brandName: "Fleamint",
     brandTagline: "Preloved market",
     navLinks: [
-      { href: "/explore", label: "Explore" },
-      { href: "/women", label: "Women" },
-      { href: "/men", label: "Men" },
-      { href: "/kids", label: "Kids" },
+      { href: "/explore", label: "Explore", icon: "compass" },
+      { href: "/men", label: "Men", icon: "jacket" },
+      { href: "/women", label: "Women", icon: "dress" },
+      { href: "/kids", label: "Kids", icon: "toy" },
     ],
     signupLabel: "Sign up",
     searchPlaceholder: "Search items, brands, sizes",
