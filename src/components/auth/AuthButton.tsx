@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -45,20 +46,12 @@ export function AuthButton() {
   if (!user) {
     return (
       <div className="relative">
-        <div className="flex gap-2">
-          <button
-            onClick={() => openWithMode("login")}
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
-          >
-            ログイン
-          </button>
-          <button
-            onClick={() => openWithMode("signup")}
-            className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300"
-          >
-            新規登録
-          </button>
-        </div>
+        <button
+          onClick={() => openWithMode("login")}
+          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700 whitespace-nowrap"
+        >
+          ログイン
+        </button>
 
         {open && (
           <div className="absolute right-0 z-40 mt-2 w-[340px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
@@ -156,29 +149,30 @@ export function AuthButton() {
   const photoURL = user.photoURL ?? undefined;
 
   return (
-    <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
+    <Link
+      href="/mypage"
+      className="group relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+      aria-label="マイページ"
+    >
       {photoURL ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={photoURL}
           alt={displayName}
-          className="h-7 w-7 rounded-full object-cover"
-          width={28}
-          height={28}
+          className="h-9 w-9 rounded-full object-cover"
+          width={36}
+          height={36}
           referrerPolicy="no-referrer"
         />
       ) : (
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
           {displayName.charAt(0).toUpperCase()}
         </span>
       )}
-      <span className="text-sm font-semibold text-slate-800">{displayName}</span>
-      <button
-        onClick={logout}
-        className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-      >
-        ログアウト
-      </button>
-    </div>
+      <span className="sr-only">マイページ</span>
+      <span className="pointer-events-none absolute top-[120%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-900 px-2 py-1 text-xs font-semibold text-white opacity-0 shadow-sm transition duration-150 group-hover:top-[130%] group-hover:opacity-100 group-focus-visible:top-[130%] group-focus-visible:opacity-100">
+        マイページへ
+      </span>
+    </Link>
   );
 }
