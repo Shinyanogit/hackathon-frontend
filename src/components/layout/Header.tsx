@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactElement } from "react";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { AuthButton } from "@/components/auth/AuthButton";
@@ -19,7 +20,7 @@ type Props = {
   searchPlaceholder: string;
 };
 
-const navIconMap: Record<NavIcon, JSX.Element> = {
+const navIconMap: Record<NavIcon, ReactElement> = {
   compass: (
     <svg
       viewBox="0 0 24 24"
