@@ -4,6 +4,7 @@ export type Item = {
   description: string;
   price: number;
   imageUrl?: string | null;
+  categorySlug?: string;
   createdAt: string;
   updatedAt: string;
 };

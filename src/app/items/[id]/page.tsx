@@ -17,6 +17,9 @@ export default function ItemDetailPage() {
     },
   });
 
+  const fallbackImage =
+    "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=900&q=80";
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12">
@@ -30,36 +33,56 @@ export default function ItemDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12">
+    <div className="mx-auto max-w-5xl px-4 py-12">
       <Link
         href="/"
-        className="text-sm font-medium text-neutral-700 underline decoration-neutral-300 underline-offset-4"
+        className="text-sm font-medium text-emerald-700 underline decoration-emerald-200 underline-offset-4 hover:text-emerald-800"
       >
-        ← Back to list
+        ← トップに戻る
       </Link>
-      <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold text-neutral-900">
-          {data.title}
-        </h1>
-        <p className="mt-2 text-sm text-neutral-500">
-          #{data.id} · {new Date(data.createdAt).toLocaleString()}
-        </p>
-        <p className="mt-4 text-base text-neutral-800">{data.description}</p>
-        <div className="mt-6 inline-flex rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">
-          ¥{data.price.toLocaleString()}
-        </div>
-        {data.imageUrl ? (
-          <div className="mt-6">
-            <a
-              href={data.imageUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex text-sm font-medium text-neutral-700 underline"
-            >
-              View image
-            </a>
+      <div className="mt-4 grid gap-8 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm md:grid-cols-[1.2fr_1fr]">
+        <div className="relative overflow-hidden rounded-2xl bg-slate-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={data.imageUrl || fallbackImage}
+            alt={data.title}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute left-3 top-3 rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur">
+            #{data.id}
           </div>
-        ) : null}
+        </div>
+        <div className="flex flex-col gap-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+              商品詳細
+            </p>
+            <h1 className="text-2xl font-bold text-slate-900 leading-tight">{data.title}</h1>
+            <p className="text-sm text-slate-500">
+              {new Date(data.createdAt).toLocaleString()}
+              {data.categorySlug ? ` · カテゴリ: ${data.categorySlug}` : ""}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 px-4 py-3">
+            <p className="text-lg font-semibold text-slate-900">¥{data.price.toLocaleString()}</p>
+          </div>
+          <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
+            {data.description}
+          </p>
+          {data.imageUrl && (
+            <div>
+              <a
+                href={data.imageUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+              >
+                画像を開く
+              </a>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

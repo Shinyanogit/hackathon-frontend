@@ -1,27 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { SearchBar } from "@/components/ui/SearchBar";
 
 type Props = {
-  onSearch?: (value: string) => void;
   badge: string;
   title: string;
   description: string;
   primaryCta: string;
   secondaryCta: string;
-  searchPlaceholder: string;
   chips: string[];
 };
 
 export function HeroSection({
-  onSearch,
   badge,
   title,
   description,
   primaryCta,
   secondaryCta,
-  searchPlaceholder,
   chips,
 }: Props) {
   return (
@@ -50,10 +45,6 @@ export function HeroSection({
             {secondaryCta}
           </Link>
         </div>
-        <SearchBar
-          onSubmit={onSearch}
-          placeholder={searchPlaceholder}
-        />
         <div className="flex flex-wrap gap-2 text-xs text-slate-500">
           {chips.map((chip) => (
             <span key={chip} className="rounded-full bg-white/80 px-3 py-1">

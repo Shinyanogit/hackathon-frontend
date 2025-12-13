@@ -14,7 +14,7 @@ export function ItemCard({ item }: Props) {
   return (
     <Link
       href={`/items/${item.id}`}
-      className="group block overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(15,23,42,0.08)]"
+      className="group block overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(15,23,42,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-slate-100">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -29,6 +29,15 @@ export function ItemCard({ item }: Props) {
         </div>
         <div className="absolute bottom-3 left-3 rounded-full bg-emerald-600 px-3 py-1 text-sm font-semibold text-white shadow">
           ¥{item.price.toLocaleString()}
+        </div>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 transition duration-300 group-hover:opacity-100" />
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-center justify-between text-[11px] font-semibold text-white opacity-0 transition duration-300 group-hover:opacity-100">
+          <span className="rounded-full bg-white/20 px-2 py-1 backdrop-blur">
+            詳細を見る
+          </span>
+          <span className="rounded-full bg-white/20 px-2 py-1 backdrop-blur">
+            #{item.id}
+          </span>
         </div>
       </div>
       <div className="flex items-start justify-between gap-3 px-4 py-3">

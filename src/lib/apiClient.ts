@@ -20,11 +20,17 @@ async function getIdToken() {
 }
 
 async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const token = await getIdToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers ?? {}),
   };
+
+  let token: string | null = null;
+  const isPublicItems = path.startsWith("/items");
+
+  if (!isPublicItems) {
+    token = await getIdToken();
+  }
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -56,4 +62,3 @@ export const apiClient = {
   delete: <T>(path: string, headers?: Record<string, string>) =>
     request<T>(path, { method: "DELETE", headers }),
 };
-
