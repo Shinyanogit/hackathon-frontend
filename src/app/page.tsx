@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -284,7 +284,7 @@ const fallbackItems: Item[] = [
   },
 ];
 
-export default function Home() {
+function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -489,5 +489,13 @@ export default function Home() {
         appAndroid={t.footer.appAndroid}
       />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-slate-500">読み込み中...</div>}>
+      <HomePageContent />
+    </Suspense>
   );
 }
