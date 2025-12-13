@@ -49,7 +49,6 @@ export function Header({
           <SearchBar
             compact
             onSubmit={onSearch}
-            onFilterClick={onSearch}
             filterOptions={filterOptions}
             selectedFilter={selectedFilter}
             onFilterChange={onFilterChange}
@@ -74,7 +73,6 @@ export function Header({
           <SearchBar
             compact
             onSubmit={onSearch}
-            onFilterClick={onSearch}
             filterOptions={filterOptions}
             selectedFilter={selectedFilter}
             onFilterChange={onFilterChange}

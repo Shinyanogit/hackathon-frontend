@@ -7,7 +7,6 @@ type Props = {
   onSubmit?: (query: string) => void;
   compact?: boolean;
   filterLabel?: string;
-  onFilterClick?: (query: string) => void;
   filterOptions?: { label: string; value: string }[];
   selectedFilter?: string;
   onFilterChange?: (value: string) => void;
@@ -18,7 +17,6 @@ export function SearchBar({
   onSubmit,
   compact = false,
   filterLabel = "絞り込み",
-  onFilterClick,
   filterOptions,
   selectedFilter,
   onFilterChange,
@@ -34,11 +32,8 @@ export function SearchBar({
   };
 
   const handleFilterClick = () => {
-    if (filterOptions && filterOptions.length > 0) {
-      setOpen((prev) => !prev);
-      return;
-    }
-    onFilterClick?.(value.trim());
+    if (!filterOptions || filterOptions.length === 0) return;
+    setOpen((prev) => !prev);
   };
 
   const handleSelectOption = (val: string) => {
