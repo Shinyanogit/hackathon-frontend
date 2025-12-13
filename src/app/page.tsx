@@ -3,27 +3,17 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CategoryTabs } from "@/components/home/CategoryTabs";
 import { HeroSection } from "@/components/home/HeroSection";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { ItemCard } from "@/components/item/ItemCard";
+import { categories } from "@/constants/categories";
 import { fetchItems } from "@/lib/api/items";
 import { Item } from "@/types/item";
 
 type Locale = "ja" | "en";
-
-const categoryDefinitions = [
-  { id: "all", label: { ja: "すべて", en: "All" }, keyword: "" },
-  { id: "women", label: { ja: "レディース", en: "Women" }, keyword: "women" },
-  { id: "men", label: { ja: "メンズ", en: "Men" }, keyword: "men" },
-  { id: "kids", label: { ja: "キッズ", en: "Kids" }, keyword: "kid" },
-  { id: "vintage", label: { ja: "ヴィンテージ", en: "Vintage" }, keyword: "vintage" },
-  { id: "sneakers", label: { ja: "スニーカー", en: "Sneakers" }, keyword: "sneaker" },
-  { id: "luxury", label: { ja: "ラグジュアリー", en: "Luxury" }, keyword: "luxury" },
-  { id: "home", label: { ja: "ホーム", en: "Home" }, keyword: "home" },
-  { id: "accessories", label: { ja: "アクセサリー", en: "Accessories" }, keyword: "accessor" },
-];
 
 const copy: Record<
   Locale,
@@ -295,45 +285,76 @@ const fallbackItems: Item[] = [
 ];
 
 export default function Home() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["items"],
-    queryFn: fetchItems,
-  });
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const [locale, setLocale] = useState<Locale>("ja");
-  const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchFilterCategory, setSearchFilterCategory] = useState("");
+
+  const activeCategorySlug = searchParams.get("category") ?? "";
 
   const t = copy[locale];
 
-  const localizedCategories = categoryDefinitions.map((category) => ({
-    id: category.id,
-    label: category.label[locale],
-  }));
+  const localizedCategories = useMemo(
+    () =>
+      categories.map((category) => ({
+        id: category.slug || "all",
+        label: category.label,
+        slug: category.slug,
+        children: category.children,
+      })),
+    []
+  );
 
-  const categoryKeyword =
-    categoryDefinitions.find((category) => category.id === selectedCategory)?.keyword ?? "";
+  const activeParentSlug =
+    localizedCategories.find((c) => c.slug === activeCategorySlug)?.slug ??
+    localizedCategories.find((c) => c.children?.some((child) => child.slug === activeCategorySlug))?.slug ??
+    "";
+
+  const activeChildren =
+    localizedCategories.find((c) => c.slug === activeParentSlug)?.children ?? [];
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["items", { category: activeCategorySlug }],
+    queryFn: () => fetchItems(activeCategorySlug ? { category: activeCategorySlug } : undefined),
+  });
 
   const items = data?.items ?? fallbackItems;
 
   const filteredItems = useMemo(() => {
-    const query = searchQuery.toLowerCase();
     return items.filter((item) => {
-      const matchesQuery =
-        item.title.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query);
       const matchesCategory =
-        selectedCategory === "all" ||
-        categoryKeyword === "" ||
-        `${item.title} ${item.description}`.toLowerCase().includes(categoryKeyword);
-      return matchesQuery && matchesCategory;
+        activeCategorySlug === "" || item.categorySlug === undefined || item.categorySlug === activeCategorySlug;
+      return matchesCategory;
     });
-  }, [items, searchQuery, selectedCategory, categoryKeyword]);
+  }, [items, activeCategorySlug]);
 
   const displayedItems = filteredItems.slice(0, 12);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
+    const params = new URLSearchParams();
+    if (value) params.set("query", value);
+    if (searchFilterCategory) params.set("filter", searchFilterCategory);
+    router.push(params.toString() ? `/items?${params.toString()}` : "/items");
+  };
+
+  const handleSelectCategory = (slug: string) => {
+    const normalized = slug === "all" ? "" : slug;
+    const params = new URLSearchParams(searchParams.toString());
+    if (normalized) {
+      params.set("category", normalized);
+    } else {
+      params.delete("category");
+    }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  };
+
+  const handleSearchFilterChange = (slug: string) => {
+    setSearchFilterCategory(slug);
   };
 
   return (
@@ -344,23 +365,25 @@ export default function Home() {
         onLocaleChange={setLocale}
         brandName={t.brandName}
         brandTagline={t.brandTagline}
-        navLinks={t.navLinks}
         signupLabel={t.signupLabel}
         searchPlaceholder={t.searchPlaceholder}
+        filterOptions={localizedCategories
+          .filter((c) => c.slug)
+          .map((c) => ({ label: c.label, value: c.slug }))}
+        selectedFilter={searchFilterCategory}
+        onFilterChange={handleSearchFilterChange}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-4 pb-16 pt-8">
         <HeroSection
-          onSearch={handleSearch}
           badge={t.hero.badge}
           title={t.hero.title}
           description={t.hero.description}
           primaryCta={t.hero.primaryCta}
           secondaryCta={t.hero.secondaryCta}
-          searchPlaceholder={t.hero.searchPlaceholder}
           chips={t.hero.chips}
         />
 
-        <section className="space-y-4">
+        <section className="space-y-4" id="categories-section">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
@@ -382,13 +405,22 @@ export default function Home() {
             </div>
           </div>
           <CategoryTabs
-            categories={localizedCategories}
-            activeId={selectedCategory}
-            onSelect={setSelectedCategory}
+            categories={localizedCategories.map((c) => ({ id: c.slug || "all", label: c.label }))}
+            activeId={activeParentSlug || "all"}
+            onSelect={handleSelectCategory}
           />
+          {activeChildren.length > 0 && (
+            <div className="pt-2">
+              <CategoryTabs
+                categories={activeChildren.map((c) => ({ id: c.slug, label: c.label }))}
+                activeId={activeCategorySlug}
+                onSelect={handleSelectCategory}
+              />
+            </div>
+          )}
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-4" id="items-section">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-slate-900">{t.itemsSectionTitle}</h3>
             <Link
