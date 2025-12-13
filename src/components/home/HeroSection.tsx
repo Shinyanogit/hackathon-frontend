@@ -54,7 +54,7 @@ export function HeroSection({
         </div>
       </div>
       <div className="relative mt-10 flex-1 lg:mt-0">
-        <div className="absolute inset-0 -left-6 -right-6 -top-6 rounded-[40px] bg-gradient-to-tr from-emerald-200/50 via-transparent to-sky-200/40 blur-3xl" />
+        <div className="absolute inset-0 rounded-[40px] bg-gradient-to-tr from-emerald-200/50 via-transparent to-sky-200/40 blur-3xl sm:-left-6 sm:-right-6 sm:-top-6" />
         <div className="relative aspect-[4/3] overflow-hidden rounded-[32px] border border-white/60 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.12)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
