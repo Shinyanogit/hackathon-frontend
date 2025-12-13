@@ -6,20 +6,50 @@ type Props = {
   placeholder?: string;
   onSubmit?: (query: string) => void;
   compact?: boolean;
+  filterLabel?: string;
+  onFilterClick?: (query: string) => void;
+  filterOptions?: { label: string; value: string }[];
+  selectedFilter?: string;
+  onFilterChange?: (value: string) => void;
 };
 
-export function SearchBar({ placeholder, onSubmit, compact = false }: Props) {
+export function SearchBar({
+  placeholder,
+  onSubmit,
+  compact = false,
+  filterLabel = "絞り込み",
+  onFilterClick,
+  filterOptions,
+  selectedFilter,
+  onFilterChange,
+}: Props) {
   const [value, setValue] = useState("");
+  const [open, setOpen] = useState(false);
+  const selectedLabel =
+    selectedFilter && filterOptions?.find((opt) => opt.value === selectedFilter)?.label;
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     onSubmit?.(value.trim());
   };
 
+  const handleFilterClick = () => {
+    if (filterOptions && filterOptions.length > 0) {
+      setOpen((prev) => !prev);
+      return;
+    }
+    onFilterClick?.(value.trim());
+  };
+
+  const handleSelectOption = (val: string) => {
+    onFilterChange?.(val);
+    setOpen(false);
+  };
+
   return (
     <form
       onSubmit={handleSubmit}
-      className={`flex items-center overflow-hidden rounded-full border border-slate-200 bg-white shadow-sm transition focus-within:ring-2 focus-within:ring-emerald-500/70 ${
+      className={`relative flex items-center rounded-full border border-slate-200 bg-white shadow-sm transition focus-within:ring-2 focus-within:ring-emerald-500/70 ${
         compact ? "px-3 py-2" : "px-4 py-2.5"
       }`}
     >
@@ -48,6 +78,43 @@ export function SearchBar({ placeholder, onSubmit, compact = false }: Props) {
       >
         Search
       </button>
+      <button
+        type="button"
+        onClick={handleFilterClick}
+        className="relative ml-2 inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-200 hover:text-emerald-700"
+      >
+        {selectedLabel ? `${filterLabel}: ${selectedLabel}` : filterLabel}
+      </button>
+      {open && filterOptions && filterOptions.length > 0 && (
+        <div className="absolute top-full right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
+          <ul className="max-h-64 overflow-y-auto text-sm text-slate-700">
+            <li>
+              <button
+                type="button"
+                className={`flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-emerald-50 ${
+                  selectedFilter === "" ? "bg-emerald-50 text-emerald-700" : ""
+                }`}
+                onClick={() => handleSelectOption("")}
+              >
+                すべて
+              </button>
+            </li>
+            {filterOptions.map((opt) => (
+              <li key={opt.value}>
+                <button
+                  type="button"
+                  className={`flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-emerald-50 ${
+                    selectedFilter === opt.value ? "bg-emerald-50 text-emerald-700" : ""
+                  }`}
+                  onClick={() => handleSelectOption(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </form>
   );
 }
