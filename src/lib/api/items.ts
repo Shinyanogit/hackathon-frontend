@@ -15,6 +15,12 @@ export async function fetchItem(id: number | string) {
   return apiClient.get<Item>(`/items/${id}`);
 }
 
-export async function createItem(payload: { title: string; description: string; price: number; imageUrl?: string }) {
+export async function createItem(payload: {
+  title: string;
+  description: string;
+  price: number;
+  imageUrl?: string;
+  categorySlug: string;
+}) {
   return apiClient.post<Item>("/items", payload);
 }
