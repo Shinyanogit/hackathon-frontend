@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
       await signInWithPopup(auth, provider);
     } finally {
       setLoading(false);

@@ -5,6 +5,7 @@ export type Item = {
   price: number;
   imageUrl?: string | null;
   categorySlug?: string;
+  sellerUid?: string;
   createdAt: string;
   updatedAt: string;
 };

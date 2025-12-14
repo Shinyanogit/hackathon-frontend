@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
+import AuthDebug from "./_debug/AuthDebug";
 import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -28,7 +31,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-neutral-50 text-neutral-900 antialiased overflow-x-hidden`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <AuthDebug />
+        </Providers>
       </body>
     </html>
   );

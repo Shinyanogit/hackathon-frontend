@@ -8,32 +8,20 @@ type ApiRequestOptions = {
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
 
-async function getIdToken() {
-  const user = auth.currentUser;
-  if (!user) return null;
-  try {
-    return await user.getIdToken();
-  } catch (error) {
-    console.error("Failed to get ID token", error);
-    return null;
-  }
-}
-
-async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+async function request<T>(path: string, options: ApiRequestOptions = {}, retried = false): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers ?? {}),
   };
 
-  let token: string | null = null;
-  const isPublicItems = path.startsWith("/items");
-
-  if (!isPublicItems) {
-    token = await getIdToken();
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const token = await user.getIdToken();
+      headers.Authorization = `Bearer ${token}`;
+    } catch (error) {
+      console.error("Failed to get ID token", error);
+    }
   }
 
   const res = await fetch(`${baseURL}${path}`, {
@@ -43,6 +31,16 @@ async function request<T>(path: string, options: ApiRequestOptions = {}): Promis
   });
 
   if (!res.ok) {
+    // 401で一度だけIDトークンを強制リフレッシュしてリトライ
+    if (res.status === 401 && !retried && user) {
+      try {
+        const fresh = await user.getIdToken(true);
+        headers.Authorization = `Bearer ${fresh}`;
+        return request<T>(path, { ...options, headers }, true);
+      } catch (e) {
+        console.error("Failed to refresh ID token", e);
+      }
+    }
     const text = await res.text();
     throw new Error(text || res.statusText);
   }

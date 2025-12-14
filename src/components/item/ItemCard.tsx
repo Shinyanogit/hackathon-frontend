@@ -8,7 +8,8 @@ type Props = {
 export function ItemCard({ item }: Props) {
   const fallbackImage =
     "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=900&q=80";
-  const displayImage = item.imageUrl || fallbackImage;
+  const displayImage =
+    item.imageUrl && item.imageUrl.trim() !== "" ? item.imageUrl : fallbackImage;
   const brand = item.title.split(" ")[0];
 
   return (

@@ -21,8 +21,13 @@ function ItemsPageContent() {
   const [filterDraft, setFilterDraft] = useState(appliedFilter);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["items", { filter: appliedFilter }],
-    queryFn: () => fetchItems(appliedFilter ? { category: appliedFilter } : undefined),
+    queryKey: ["items", { filter: appliedFilter, query: appliedQuery }],
+    queryFn: () =>
+      fetchItems(
+        appliedFilter || appliedQuery
+          ? { category: appliedFilter || undefined, query: appliedQuery || undefined }
+          : undefined
+      ),
   });
 
   const items = data?.items ?? [];
