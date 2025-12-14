@@ -1,123 +1,227 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createConversation, listMessages, sendMessage, Message } from "@/lib/api/conversations";
+import { useMemo, useState } from "react";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { deleteMessage, listConversations } from "@/lib/api/conversations";
+import { fetchThread, ThreadMessage } from "@/lib/api/items";
+import { fetchPublicUser } from "@/lib/api/users";
 import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/apiClient";
 
 type Props = {
   itemId: number;
   sellerUid?: string;
   currentUid?: string;
-  initialConversationId?: number | null;
 };
 
-export function ChatBox({ itemId, sellerUid, currentUid, initialConversationId = null }: Props) {
-  const [conversationId, setConversationId] = useState<number | null>(initialConversationId);
+type PostMessageBody = {
+  text: string;
+  parentMessageId?: number | null;
+  senderName?: string;
+  senderIconUrl?: string | null;
+};
+
+export function ChatBox({ itemId, sellerUid, currentUid }: Props) {
   const [body, setBody] = useState("");
+  const [replyTo, setReplyTo] = useState<ThreadMessage | null>(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isSellerViewingOwnItem = sellerUid && currentUid && sellerUid === currentUid;
+  const isAuthenticated = !!user;
 
-  const messagesQuery = useQuery({
-    queryKey: ["messages", conversationId],
-    queryFn: () => listMessages(conversationId as number),
-    enabled: conversationId !== null,
+  const { data: myConversations } = useQuery({
+    queryKey: ["conversations", currentUid],
+    queryFn: listConversations,
+    enabled: isSellerViewingOwnItem && isAuthenticated,
   });
 
-  const createMutation = useMutation({
-    mutationFn: () => createConversation(itemId),
-    onSuccess: (res) => {
-      setConversationId(res.conversationId);
-    },
+  const threadQuery = useQuery({
+    queryKey: ["thread", itemId],
+    queryFn: () => fetchThread(itemId),
   });
+
+  const messages: ThreadMessage[] = useMemo(
+    () => threadQuery.data?.messages ?? [],
+    [threadQuery.data?.messages]
+  );
+
+  const profileQueries = useQueries({
+    queries: Array.from(new Set(messages.map((m) => m.senderUid))).map((uid) => ({
+      queryKey: ["public-user", uid],
+      queryFn: () => fetchPublicUser(uid),
+      enabled: !!uid,
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+
+  const profileMap = useMemo(() => {
+    const map = new Map<string, Awaited<ReturnType<typeof fetchPublicUser>>>();
+    profileQueries.forEach((q) => {
+      if (q.data?.uid) {
+        map.set(q.data.uid, q.data);
+      }
+    });
+    return map;
+  }, [profileQueries]);
+
+  const conversationId =
+    threadQuery.data?.conversationId ??
+    (isSellerViewingOwnItem
+      ? myConversations?.find((c) => c.itemId === itemId)?.conversationId ?? null
+      : null);
 
   const sendMutation = useMutation({
-    mutationFn: () =>
-      sendMessage(
-        conversationId as number,
-        body,
-        user?.displayName ?? "",
-        user?.photoURL ?? undefined
-      ),
+    mutationFn: (payload: PostMessageBody) =>
+      apiClient.post(`/items/${itemId}/messages`, payload).then((r) => r.data),
     onSuccess: () => {
       setBody("");
-      queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
+      setReplyTo(null);
+      queryClient.invalidateQueries({ queryKey: ["thread", itemId] });
+      queryClient.invalidateQueries({ queryKey: ["conversations", currentUid] });
     },
   });
 
-  useEffect(() => {
-    if (sellerUid && currentUid && sellerUid === currentUid) {
-      return;
-    }
-    if (initialConversationId) {
-      setConversationId(initialConversationId);
-      return;
-    }
-    // auto fetch existing conversation on first render by trying create (idempotent)
-    createMutation.mutate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemId, initialConversationId, sellerUid, currentUid]);
+  const deleteMutation = useMutation({
+    mutationFn: (messageId: number) => deleteMessage(conversationId as number, messageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["thread", itemId] });
+    },
+  });
 
-  const messages: Message[] = messagesQuery.data ?? [];
+  const threadTree = useMemo(() => {
+    const map = new Map<number, ThreadMessage & { children: ThreadMessage[] }>();
+    messages.forEach((m) => map.set(m.id, { ...m, children: [] }));
+    const roots: (ThreadMessage & { children: ThreadMessage[] })[] = [];
+    map.forEach((m) => {
+      if (m.parentMessageId && map.has(m.parentMessageId)) {
+        map.get(m.parentMessageId)!.children.push(m);
+      } else {
+        roots.push(m);
+      }
+    });
+    return roots;
+  }, [messages]);
+
+  const renderThread = (nodes: (ThreadMessage & { children: ThreadMessage[] })[], level = 0) =>
+    nodes.map((m) => {
+      const profile = profileMap.get(m.senderUid);
+      const name = profile?.displayName || m.senderName || m.senderUid;
+      const icon =
+        profile?.photoURL ||
+        m.senderIconUrl ||
+        "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=200&q=60";
+
+      return (
+      <div key={m.id} className="space-y-1 rounded-lg bg-white px-3 py-2 shadow-sm" style={{ marginLeft: level * 12 }}>
+        <div className="flex items-start gap-2">
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-emerald-50 text-xs font-bold text-emerald-700">
+            {icon ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={icon} alt={name} className="h-full w-full object-cover" />
+            ) : (
+              (name || "?").charAt(0).toUpperCase()
+            )}
+          </div>
+          <div className="flex-1">
+            <p className="text-[11px] font-semibold text-slate-700">
+              {name}{" "}
+              <span className="font-normal text-slate-500">{new Date(m.createdAt).toLocaleString()}</span>
+            </p>
+            <p className="text-sm text-slate-800 whitespace-pre-line">{m.body}</p>
+            {isAuthenticated && (
+              <div className="mt-1 flex items-center gap-2">
+                <button
+                  onClick={() => setReplyTo(m)}
+                  className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800"
+                >
+                  返信
+                </button>
+                {user?.uid === m.senderUid && (
+                  <button
+                    onClick={() => {
+                      if (!conversationId) return;
+                      deleteMutation.mutate(m.id);
+                    }}
+                    className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+                    disabled={deleteMutation.isPending}
+                  >
+                    削除
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        {m.children.length > 0 && <div className="space-y-2">{renderThread(m.children, level + 1)}</div>}
+      </div>
+    );
+    });
 
   return (
     <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-900">出品者にDM</h3>
-        {createMutation.isPending && <span className="text-xs text-slate-500">接続中...</span>}
+        {threadQuery.isLoading && <span className="text-xs text-slate-500">読み込み中...</span>}
       </div>
-      {sellerUid && currentUid && sellerUid === currentUid && (
-        <p className="mt-2 text-sm text-slate-500">自分の商品にはDMできません。</p>
+      {isSellerViewingOwnItem && (
+        <p className="mt-2 text-sm text-slate-500">
+          自分の商品にはDMできません。購入者から届いたスレッドにのみ返信できます。
+        </p>
       )}
-      {createMutation.isError && (
-        <p className="mt-2 text-sm text-red-600">チャットの開始に失敗しました。再度お試しください。</p>
-      )}
-      <div className="mt-3 max-h-64 space-y-2 overflow-y-auto rounded-xl bg-slate-50 p-3 text-sm text-slate-800">
-        {messages.length === 0 && <p className="text-xs text-slate-500">まだメッセージはありません。</p>}
-        {messages.map((m) => (
-          <div key={m.id} className="flex gap-2 rounded-lg bg-white px-3 py-2 shadow-sm">
-            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-emerald-50 text-xs font-bold text-emerald-700">
-              {m.senderIconUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.senderIconUrl} alt={m.senderName || m.senderUid} className="h-full w-full object-cover" />
-              ) : (
-                (m.senderName || m.senderUid || "?").charAt(0).toUpperCase()
-              )}
-            </div>
-            <div className="flex-1">
-              <p className="text-[11px] font-semibold text-slate-700">
-                {m.senderName || m.senderUid}{" "}
-                <span className="font-normal text-slate-500">
-                  {new Date(m.createdAt).toLocaleString()}
-                </span>
-              </p>
-              <p className="text-sm text-slate-800">{m.body}</p>
-            </div>
-          </div>
-        ))}
+      <div className="mt-3 max-h-80 space-y-2 overflow-y-auto rounded-xl bg-slate-50 p-3 text-sm text-slate-800">
+        {messages.length === 0 && (
+          <p className="text-xs text-slate-500">
+            {isSellerViewingOwnItem ? "購入者からのDMはまだありません。" : "まだメッセージはありません。"}
+          </p>
+        )}
+        {renderThread(threadTree)}
       </div>
-      <form
-        className="mt-3 flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!conversationId || !body.trim()) return;
-          sendMutation.mutate();
-        }}
-      >
-        <input
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
-          placeholder="メッセージを入力"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-        />
-        <button
-          type="submit"
-          disabled={!conversationId || sendMutation.isPending}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+      {isAuthenticated && (!isSellerViewingOwnItem || conversationId) ? (
+        <form
+          className="mt-3 flex flex-col gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!body.trim()) return;
+            const payload: PostMessageBody = { text: body.trim() };
+            if (replyTo) payload.parentMessageId = replyTo.id;
+            payload.senderName = user?.displayName || user?.uid || "";
+            payload.senderIconUrl = user?.photoURL || undefined;
+            sendMutation.mutate(payload);
+          }}
         >
-          送信
-        </button>
-      </form>
+          <input
+            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+            placeholder={replyTo ? `返信先: ${replyTo.senderName || replyTo.senderUid}` : "メッセージを入力"}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+          />
+          {replyTo && (
+            <div className="flex items-center gap-2 text-[11px] text-slate-600">
+              返信中: {replyTo.body.slice(0, 40)}
+              <button
+                type="button"
+                className="text-emerald-700 hover:text-emerald-800"
+                onClick={() => setReplyTo(null)}
+              >
+                返信をやめる
+              </button>
+            </div>
+          )}
+          {!isSellerViewingOwnItem && (
+            <p className="text-[11px] text-slate-500">ルート投稿（商品への新規DM）ができます。</p>
+          )}
+          {isSellerViewingOwnItem && replyTo && (
+            <p className="text-[11px] text-slate-500">返信のみ可能です（出品者の新規DMは禁止）。</p>
+          )}
+          <button
+            type="submit"
+            disabled={sendMutation.isPending}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+          >
+            送信
+          </button>
+        </form>
+      ) : null}
     </div>
   );
 }

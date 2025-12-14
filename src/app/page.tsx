@@ -66,13 +66,13 @@ const copy: Record<
     searchPlaceholder: "アイテム名、ブランド、サイズで検索",
     hero: {
       badge: "次世代フリマ",
-      title: "好きだった服を、次に好きな人へ。",
+      title: "好きだった物を、次に好きな人へ。",
       description:
-        "シンプルなUIと安心設計で、出品も購入もストレスなく。数秒で出品、すぐに見つかる次の持ち主。",
+        "出品も購入もストレスなく。数秒で出品、すぐに見つかる次の持ち主。",
       primaryCta: "出品を始める",
       secondaryCta: "商品を探す",
       searchPlaceholder: "\"デニムジャケット\" \"ナイキ スニーカー\" などで検索",
-      chips: ["購入者保護付き", "すぐに売れる設計", "クリーンなカードUI"],
+      chips: ["購入者保護付き", "すぐに売れる設計"],
     },
     categoryHeading: "カテゴリから探す",
     categorySubheading: "スタイルに合わせてブラウズ",

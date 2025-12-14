@@ -8,8 +8,6 @@ const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",

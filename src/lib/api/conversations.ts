@@ -46,3 +46,7 @@ export async function sendMessage(conversationId: number | string, body: string,
     senderIconUrl,
   });
 }
+
+export async function deleteMessage(conversationId: number | string, messageId: number | string) {
+  return apiClient.delete<{ status: string }>(`/conversations/${conversationId}/messages/${messageId}`);
+}

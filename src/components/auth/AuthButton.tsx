@@ -120,7 +120,7 @@ export function AuthButton() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="email@example.com"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500"
                   />
                   <input
                     type="password"
@@ -128,7 +128,7 @@ export function AuthButton() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="パスワード"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500"
                   />
                   <button
                     type="submit"
