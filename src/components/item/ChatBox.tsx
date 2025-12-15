@@ -34,7 +34,7 @@ export function ChatBox({ itemId, sellerUid, currentUid, initialConversationId, 
   const { data: myConversations } = useQuery({
     queryKey: ["conversations", currentUid],
     queryFn: listConversations,
-    enabled: isSellerViewingOwnItem && isAuthenticated,
+    enabled: Boolean(isSellerViewingOwnItem && isAuthenticated),
   });
 
   const threadQuery = useQuery({
@@ -46,7 +46,7 @@ export function ChatBox({ itemId, sellerUid, currentUid, initialConversationId, 
   const purchaseMessagesQuery = useQuery({
     queryKey: ["messages", purchaseConversationId],
     queryFn: () => listMessages(purchaseConversationId as number),
-    enabled: !!purchaseConversationId && isAuthenticated,
+    enabled: Boolean(purchaseConversationId && isAuthenticated),
   });
 
   const messages: ThreadMessage[] = useMemo(() => {
