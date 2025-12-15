@@ -110,7 +110,7 @@ export function ChatBox({ itemId, sellerUid, currentUid, initialConversationId, 
       if (purchaseConversationId && conversationId) {
         return sendMessage(conversationId, payload.text, payload.senderName, payload.senderIconUrl);
       }
-      return apiClient.post(`/items/${itemId}/messages`, payload).then((r) => r.data);
+      return apiClient.post(`/items/${itemId}/messages`, payload);
     },
     onSuccess: () => {
       setBody("");
