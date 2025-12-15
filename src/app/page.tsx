@@ -83,7 +83,6 @@ const copy: Record<
     empty: "該当する商品がありません。別のキーワードで試してください。",
     statsLabel: (count) => `${count} 点`,
     footer: {
-      description: "次世代フリマのUIデザイン。Next.js + Tailwind製。",
       description: "洗練されたマーケット体験を提供します。",
       appTitle: "アプリでさらに快適",
       appIos: "iOS 版をダウンロード",
