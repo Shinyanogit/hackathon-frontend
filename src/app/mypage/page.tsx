@@ -103,7 +103,7 @@ export default function MyPage() {
     setEditDescription(item.description);
     setEditPrice(item.price);
     setEditImageUrl(item.imageUrl ?? "");
-    setEditCategory(item.categorySlug);
+    setEditCategory(item.categorySlug ?? "");
     setEditMessage(null);
   };
 
