@@ -50,10 +50,11 @@ export default function ItemDetailPage() {
 
   const fallbackImage =
     "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=900&q=80";
+  const sellerUid = data?.sellerUid;
   const { data: sellerProfile } = useQuery({
-    queryKey: ["public-user", data?.sellerUid],
-    queryFn: () => fetchPublicUser(data!.sellerUid),
-    enabled: !!data?.sellerUid,
+    queryKey: ["public-user", sellerUid],
+    queryFn: () => fetchPublicUser(sellerUid as string),
+    enabled: !!sellerUid,
   });
   const sellerName =
     sellerProfile?.displayName ||
