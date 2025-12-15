@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { createItem } from "@/lib/api/items";
+import { enhanceImage } from "@/lib/api/ai";
 import { categories } from "@/constants/categories";
 import { auth, storage } from "@/lib/firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -25,7 +26,14 @@ export default function SellPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFileName, setImageFileName] = useState("");
+  const [aiResult, setAiResult] = useState<{
+    originalUrl: string;
+    enhancedUrl: string;
+    meta: { mode: string; strength: number; background: string; elapsedMs: number };
+  } | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<"original" | "ai">("original");
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -39,7 +47,9 @@ export default function SellPage() {
 
       let imageUrl = "https://picsum.photos/seed/item-placeholder/800/600";
 
-      if (selectedFile) {
+      if (aiResult) {
+        imageUrl = selectedVersion === "ai" ? aiResult.enhancedUrl : aiResult.originalUrl;
+      } else if (selectedFile) {
         const storagePath = `items/${user.uid}/${Date.now()}-${selectedFile.name}`;
         const storageRef = ref(storage, storagePath);
         const snap = await uploadBytes(storageRef, selectedFile);
@@ -70,9 +80,7 @@ export default function SellPage() {
     mutation.mutate();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFiles = (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
       setError("画像ファイルは5MB以下にしてください");
       return;
@@ -83,10 +91,63 @@ export default function SellPage() {
       setImagePreview(result);
       setImageFileName(file.name);
       setSelectedFile(file);
+      setAiResult(null);
+      setSelectedVersion("original");
       setError(null);
     };
     reader.readAsDataURL(file);
   };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleFiles(file);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleFiles(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const enhanceMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedFile) {
+        throw new Error("AI補正には画像ファイルを選択してください");
+      }
+      return enhanceImage({
+        image: selectedFile,
+        category: categorySlug,
+        mode: "auto",
+      });
+    },
+    onSuccess: (res) => {
+      setAiResult(res);
+      setSelectedVersion("ai");
+      setError(null);
+    },
+    onError: (e: unknown) => {
+      const message =
+        e instanceof Error ? e.message : "AI背景クリーンアップに失敗しました。元画像のまま続行できます。";
+      setError(message);
+    },
+  });
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 px-4 py-10 sm:px-6">
@@ -169,22 +230,89 @@ export default function SellPage() {
             <label className="text-sm font-semibold text-slate-800" htmlFor="image-file">
               画像 <span className="text-xs font-normal text-slate-500">(任意・画像ファイル推奨)</span>
             </label>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+            <div
+              className={`flex flex-col gap-2 rounded-lg border border-dashed px-3 py-4 text-sm transition sm:flex-row sm:items-center ${
+                isDragging ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-slate-50"
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
                 <input id="image-file" type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                 <span>画像ファイルを選択</span>
               </label>
-              {imageFileName && <span className="text-xs text-slate-500">{imageFileName}</span>}
+              <div className="text-xs text-slate-500">またはここにドラッグ＆ドロップ</div>
+              {imageFileName && <span className="text-xs text-slate-500">選択中: {imageFileName}</span>}
             </div>
             <p className="text-xs text-slate-500">
               5MB以下の画像ファイルに対応。選択しない場合はサンプル画像が自動で設定されます。
             </p>
-            {imagePreview && (
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imagePreview} alt="Preview" className="h-48 w-full object-cover" />
+            <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-slate-800">Listing Photo Enhancer</p>
+                  <p className="text-xs text-slate-500">
+                    AIで背景・光を補正しました（商品自体は変更しません）
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => enhanceMutation.mutate()}
+                    disabled={enhanceMutation.isPending || mutation.isPending}
+                    className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                  >
+                    {enhanceMutation.isPending ? "AIで補正中..." : "AIで背景をきれいにする"}
+                  </button>
+                </div>
               </div>
-            )}
+
+              {aiResult && (
+                <div className="flex flex-wrap gap-2 text-xs text-slate-700">
+                  <label className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1">
+                    <input
+                      type="radio"
+                      name="preview-version"
+                      value="ai"
+                      checked={selectedVersion === "ai"}
+                      onChange={() => setSelectedVersion("ai")}
+                    />
+                    AI版を使う
+                  </label>
+                  <label className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1">
+                    <input
+                      type="radio"
+                      name="preview-version"
+                      value="original"
+                      checked={selectedVersion === "original"}
+                      onChange={() => setSelectedVersion("original")}
+                    />
+                    元画像を使う
+                  </label>
+                  <span className="rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700">
+                    {aiResult.meta.mode} / background {aiResult.meta.background}
+                  </span>
+                </div>
+              )}
+
+              {(imagePreview || aiResult) && (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={
+                      aiResult
+                        ? selectedVersion === "ai"
+                          ? aiResult.enhancedUrl
+                          : aiResult.originalUrl
+                        : (imagePreview as string)
+                    }
+                    alt="Preview"
+                    className="h-48 w-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

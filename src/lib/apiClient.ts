@@ -17,7 +17,7 @@ type ApiRequestOptions = {
   headers?: Record<string, string>;
 };
 
-const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
+export const apiBaseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
 
 async function request<T>(path: string, options: ApiRequestOptions = {}, retried = false): Promise<T> {
   const headers: Record<string, string> = {
@@ -35,7 +35,7 @@ async function request<T>(path: string, options: ApiRequestOptions = {}, retried
     }
   }
 
-  const res = await fetch(`${baseURL}${path}`, {
+  const res = await fetch(`${apiBaseURL}${path}`, {
     method: options.method ?? "GET",
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,

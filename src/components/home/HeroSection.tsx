@@ -86,7 +86,7 @@ export function HeroSection({
         <div className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 shadow-sm">
           {badge}
         </div>
-        <h1 className="text-3xl font-bold leading-tight text-slate-900 sm:text-4xl lg:text-5xl">
+        <h1 className="whitespace-pre-line text-3xl font-bold leading-tight text-slate-900 sm:text-4xl lg:text-5xl">
           {title}
         </h1>
         <p className="text-base text-slate-600 sm:text-lg">
