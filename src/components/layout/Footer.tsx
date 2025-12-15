@@ -56,23 +56,25 @@ export function Footer({
               </ul>
             </div>
           ))}
-          <div>
-            <p className="text-sm font-semibold text-slate-900">{appTitle}</p>
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-emerald-600 shadow">
-                  📱
-                </span>
-                {appIos}
-              </div>
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-emerald-600 shadow">
-                  🤖
-                </span>
-                {appAndroid}
+          {appTitle && (
+            <div>
+              <p className="text-sm font-semibold text-slate-900">{appTitle}</p>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-emerald-600 shadow">
+                    📱
+                  </span>
+                  {appIos}
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-emerald-600 shadow">
+                    🤖
+                  </span>
+                  {appAndroid}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
         <div className="mt-10 flex flex-col gap-2 border-t border-slate-100 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <p>

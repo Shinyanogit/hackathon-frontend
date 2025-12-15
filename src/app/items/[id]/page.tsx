@@ -204,9 +204,6 @@ export default function ItemDetailPage() {
                 </Link>
               </div>
             )}
-            <div className="rounded-2xl bg-slate-50 px-4 py-3">
-              <p className="text-lg font-semibold text-slate-900">¥{data.price.toLocaleString()}</p>
-            </div>
             <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
               {data.description}
             </p>

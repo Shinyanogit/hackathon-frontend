@@ -71,6 +71,7 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged }:
   const isSeller = !!user && sellerUid === user.uid;
   const isBuyer = !!user && purchase?.buyerUid === user.uid;
   const sold = !!purchase && !isCanceled;
+  const canPurchase = !!user && !sold && !isSeller;
 
   const purchaseMutation = useMutation({
     mutationFn: () => purchaseItem(itemId),
@@ -143,14 +144,26 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged }:
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
             Purchase
           </p>
           <h3 className="text-lg font-bold text-slate-900">{headline}</h3>
         </div>
-        {purchase && <StatusBadge status={purchase.status} />}
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-2xl font-bold text-slate-900">¥{price.toLocaleString()}</p>
+          {canPurchase && (
+            <button
+              className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              onClick={() => purchaseMutation.mutate()}
+              disabled={purchaseMutation.isPending}
+            >
+              {purchaseMutation.isPending ? "処理中..." : "購入する"}
+            </button>
+          )}
+          {purchase && <StatusBadge status={purchase.status} />}
+        </div>
       </div>
 
       <div className="mt-3 space-y-3 text-sm text-slate-700">
@@ -160,26 +173,6 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged }:
             <p className="text-xs text-slate-600">
               購入・DMにはログインが必要です。上部のログインボタンからサインインしてください。
             </p>
-          </div>
-        )}
-
-        {user && !sold && !isSeller && (
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-            <p className="text-sm font-semibold text-slate-900">
-              ¥{price.toLocaleString()} で購入する
-            </p>
-            <p className="text-xs text-slate-600">
-              購入すると出品者との取引スレッドが開き、発送手続きが始まります。
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
-                onClick={() => purchaseMutation.mutate()}
-                disabled={purchaseMutation.isPending}
-              >
-                {purchaseMutation.isPending ? "処理中..." : "購入する"}
-              </button>
-            </div>
           </div>
         )}
 

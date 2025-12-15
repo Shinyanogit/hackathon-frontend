@@ -84,9 +84,9 @@ const copy: Record<
     statsLabel: (count) => `${count} 点`,
     footer: {
       description: "洗練されたマーケット体験を提供します。",
-      appTitle: "アプリでさらに快適",
-      appIos: "iOS 版をダウンロード",
-      appAndroid: "Android 版をダウンロード",
+      appTitle: "",
+      appIos: "",
+      appAndroid: "",
       columns: [
         {
           title: "マーケットプレイス",
@@ -157,9 +157,9 @@ const copy: Record<
     statsLabel: (count) => `${count} items`,
     footer: {
       description: "A modern resale experience built with Next.js and Tailwind.",
-      appTitle: "Get the app",
-      appIos: "Download for iOS",
-      appAndroid: "Download for Android",
+      appTitle: "",
+      appIos: "",
+      appAndroid: "",
       columns: [
         {
           title: "Marketplace",
