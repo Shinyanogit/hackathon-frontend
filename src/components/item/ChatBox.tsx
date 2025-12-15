@@ -137,12 +137,14 @@ export function ChatBox({ itemId, sellerUid, currentUid, initialConversationId, 
   });
 
   const threadTree = useMemo(() => {
-    const map = new Map<number, ThreadMessage & { children: ThreadMessage[] }>();
+    const map = new Map<number, ThreadMessage>();
     messages.forEach((m) => map.set(m.id, { ...m, children: [] }));
-    const roots: (ThreadMessage & { children: ThreadMessage[] })[] = [];
+    const roots: ThreadMessage[] = [];
     map.forEach((m) => {
       if (m.parentMessageId && map.has(m.parentMessageId)) {
-        map.get(m.parentMessageId)!.children.push(m);
+        const parent = map.get(m.parentMessageId)!;
+        parent.children = parent.children || [];
+        parent.children.push(m);
       } else {
         roots.push(m);
       }
@@ -150,7 +152,7 @@ export function ChatBox({ itemId, sellerUid, currentUid, initialConversationId, 
     return roots;
   }, [messages]);
 
-  const renderThread = (nodes: (ThreadMessage & { children: ThreadMessage[] })[], level = 0) =>
+  const renderThread = (nodes: ThreadMessage[], level = 0) =>
     nodes.map((m) => {
       const profile = profileMap.get(m.senderUid);
       const name = profile?.displayName || m.senderName || m.senderUid;
@@ -158,6 +160,7 @@ export function ChatBox({ itemId, sellerUid, currentUid, initialConversationId, 
         profile?.photoURL ||
         m.senderIconUrl ||
         "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=200&q=60";
+      const children = m.children ?? [];
 
       return (
       <div key={m.id} className="space-y-1 rounded-lg bg-white px-3 py-2 shadow-sm" style={{ marginLeft: level * 12 }}>
@@ -200,7 +203,7 @@ export function ChatBox({ itemId, sellerUid, currentUid, initialConversationId, 
             )}
           </div>
         </div>
-        {m.children.length > 0 && <div className="space-y-2">{renderThread(m.children, level + 1)}</div>}
+        {children.length > 0 && <div className="space-y-2">{renderThread(children, level + 1)}</div>}
       </div>
     );
     });

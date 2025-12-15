@@ -11,6 +11,7 @@ export type ThreadMessage = {
   depth: number;
   body: string;
   createdAt: string;
+  children?: ThreadMessage[];
 };
 
 export type ThreadResponse = {
