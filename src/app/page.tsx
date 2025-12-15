@@ -332,6 +332,7 @@ function HomePageContent() {
   }, [items, activeCategorySlug]);
 
   const displayedItems = filteredItems.slice(0, 12);
+  const heroItems = useMemo(() => items.slice(0, 10), [items]);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -381,6 +382,7 @@ function HomePageContent() {
           primaryCta={t.hero.primaryCta}
           secondaryCta={t.hero.secondaryCta}
           chips={t.hero.chips}
+          featuredItems={heroItems}
         />
 
         <section className="space-y-4" id="categories-section">
@@ -447,34 +449,22 @@ function HomePageContent() {
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-lg">
               💸
             </span>
-            <p className="text-base font-semibold text-slate-900">
-              Sell fast
-            </p>
-            <p className="text-sm text-slate-600">
-              List in minutes with clean forms and instant previews.
-            </p>
+            <p className="text-base font-semibold text-slate-900">すぐ売れる</p>
+            <p className="text-sm text-slate-600">シンプルなフォームで数分で出品、プレビューで安心。</p>
           </div>
           <div className="space-y-2">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-lg">
               🔒
             </span>
-            <p className="text-base font-semibold text-slate-900">
-              Safe & transparent
-            </p>
-            <p className="text-sm text-slate-600">
-              Buyer protection and clear pricing in a clean marketplace UX.
-            </p>
+            <p className="text-base font-semibold text-slate-900">安心・透明</p>
+            <p className="text-sm text-slate-600">購入者保護と分かりやすい価格で、安心して取引できます。</p>
           </div>
           <div className="space-y-2">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-lg">
               🌱
             </span>
-            <p className="text-base font-semibold text-slate-900">
-              Circular by default
-            </p>
-            <p className="text-sm text-slate-600">
-              Celebrate second-hand style with a bright, airy interface.
-            </p>
+            <p className="text-base font-semibold text-slate-900">循環を楽しむ</p>
+            <p className="text-sm text-slate-600">明るく軽やかなUIで、セカンドハンドをもっと心地よく。</p>
           </div>
         </section>
       </main>

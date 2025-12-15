@@ -164,9 +164,6 @@ export default function ItemDetailPage() {
               className="h-full w-full object-cover"
               loading="lazy"
             />
-            <div className="absolute left-3 top-3 rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur">
-              #{data.id}
-            </div>
           </div>
           <div className="flex flex-col gap-4">
             <div className="space-y-2">

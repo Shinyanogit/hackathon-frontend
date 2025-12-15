@@ -32,13 +32,8 @@ export function ItemCard({ item }: Props) {
           ¥{item.price.toLocaleString()}
         </div>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 transition duration-300 group-hover:opacity-100" />
-        <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-center justify-between text-[11px] font-semibold text-white opacity-0 transition duration-300 group-hover:opacity-100">
-          <span className="rounded-full bg-white/20 px-2 py-1 backdrop-blur">
-            詳細を見る
-          </span>
-          <span className="rounded-full bg-white/20 px-2 py-1 backdrop-blur">
-            #{item.id}
-          </span>
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-center justify-center text-[11px] font-semibold text-white opacity-0 transition duration-300 group-hover:opacity-100">
+          <span className="rounded-full bg-white/20 px-2 py-1 backdrop-blur">詳細を見る</span>
         </div>
       </div>
       <div className="flex items-start justify-between gap-3 px-4 py-3">
@@ -50,9 +45,7 @@ export function ItemCard({ item }: Props) {
             {item.description}
           </p>
         </div>
-        <span className="text-[11px] font-medium text-slate-400">
-          #{item.id}
-        </span>
+        <span className="text-xs font-semibold text-slate-900">¥{item.price.toLocaleString()}</span>
       </div>
     </Link>
   );
