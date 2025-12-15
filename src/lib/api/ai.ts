@@ -43,6 +43,7 @@ export async function enhanceImage(params: {
 
   if (!res.ok) {
     const text = await res.text();
+    console.error("[enhanceImage] request failed", { status: res.status, body: text || res.statusText });
     // try refresh once on 401
     if (res.status === 401) {
       const fresh = await user.getIdToken(true);
@@ -53,14 +54,29 @@ export async function enhanceImage(params: {
       });
       if (!retry.ok) {
         const retryText = await retry.text();
+        console.error("[enhanceImage] retry failed", { status: retry.status, body: retryText || retry.statusText });
         throw new ApiError(retry.status, retryText || retry.statusText);
       }
-      return (await retry.json()) as EnhanceImageResponse;
+      const retryData = (await retry.json()) as EnhanceImageResponse;
+      console.info("[enhanceImage] retry success", {
+        mode: retryData.meta?.mode,
+        background: retryData.meta?.background,
+        strength: retryData.meta?.strength,
+        elapsedMs: retryData.meta?.elapsedMs,
+      });
+      return retryData;
     }
     throw new ApiError(res.status, text || res.statusText);
   }
 
-  return (await res.json()) as EnhanceImageResponse;
+  const data = (await res.json()) as EnhanceImageResponse;
+  console.info("[enhanceImage] success", {
+    mode: data.meta?.mode,
+    background: data.meta?.background,
+    strength: data.meta?.strength,
+    elapsedMs: data.meta?.elapsedMs,
+  });
+  return data;
 }
 
 export async function askItemWithGemini(itemId: number | string, question: string): Promise<{ answer: string }> {
