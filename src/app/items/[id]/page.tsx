@@ -80,7 +80,7 @@ export default function ItemDetailPage() {
     setTitle(data.title);
     setDescription(data.description);
     setPrice(data.price);
-    setCategory(data.categorySlug);
+    setCategory(data.categorySlug ?? "");
     setImagePreview(data.imageUrl ?? null);
   }, [data]);
 
