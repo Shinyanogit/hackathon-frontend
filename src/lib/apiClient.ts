@@ -1,5 +1,16 @@
 import { auth } from "@/lib/firebase";
 
+export class ApiError extends Error {
+  status: number;
+  body: string;
+
+  constructor(status: number, body: string) {
+    super(body || `HTTP ${status}`);
+    this.status = status;
+    this.body = body;
+  }
+}
+
 type ApiRequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -42,7 +53,7 @@ async function request<T>(path: string, options: ApiRequestOptions = {}, retried
       }
     }
     const text = await res.text();
-    throw new Error(text || res.statusText);
+    throw new ApiError(res.status, text || res.statusText);
   }
 
   return (await res.json()) as T;

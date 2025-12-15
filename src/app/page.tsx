@@ -84,6 +84,7 @@ const copy: Record<
     statsLabel: (count) => `${count} 点`,
     footer: {
       description: "次世代フリマのUIデザイン。Next.js + Tailwind製。",
+      description: "洗練されたマーケット体験を提供します。",
       appTitle: "アプリでさらに快適",
       appIos: "iOS 版をダウンロード",
       appAndroid: "Android 版をダウンロード",

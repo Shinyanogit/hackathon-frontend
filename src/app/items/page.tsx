@@ -97,7 +97,7 @@ function ItemsPageContent() {
       <Footer
         brandName="Fleamint"
         brandTagline="プレラブドマーケット"
-        description="次世代フリマのUIデザイン。Next.js + Tailwind製。"
+        description="洗練されたマーケット体験を提供します。"
         columns={[]}
         legalLinks={[]}
         appTitle=""

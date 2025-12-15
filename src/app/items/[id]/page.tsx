@@ -4,9 +4,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { ChatBox } from "@/components/item/ChatBox";
+import { GeminiAsk } from "@/components/item/GeminiAsk";
+import { PurchasePanel } from "@/components/item/PurchasePanel";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/context/AuthContext";
+import { categories } from "@/constants/categories";
 import { fetchItem, updateItem } from "@/lib/api/items";
+import { fetchPurchase } from "@/lib/api/purchases";
 import { fetchPublicUser } from "@/lib/api/users";
 import { storage } from "@/lib/firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -37,6 +41,12 @@ export default function ItemDetailPage() {
       return fetchItem(id as string);
     },
   });
+  const { data: purchase, refetch: refetchPurchase } = useQuery({
+    queryKey: ["purchase", id, user?.uid],
+    queryFn: () => fetchPurchase(id as string),
+    enabled: !!id && !!user,
+  });
+  const activePurchase = purchase?.status === "canceled" ? null : purchase;
 
   const fallbackImage =
     "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=900&q=80";
@@ -211,6 +221,26 @@ export default function ItemDetailPage() {
                 </a>
               </div>
             )}
+            {!isOwner && (
+              <GeminiAsk
+                itemId={Number(data.id)}
+                item={{
+                  title: data.title,
+                  description: data.description,
+                  price: data.price,
+                  categorySlug: data.categorySlug,
+                }}
+              />
+            )}
+            <PurchasePanel
+              itemId={Number(data.id)}
+              price={data.price}
+              sellerUid={data.sellerUid}
+              purchase={activePurchase ?? null}
+              onChanged={() => {
+                refetchPurchase();
+              }}
+            />
             {isOwner && (
               <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center justify-between">
@@ -300,14 +330,16 @@ export default function ItemDetailPage() {
             )}
           </div>
         </div>
-        <ChatBox
-          itemId={Number(data.id)}
-          sellerUid={data.sellerUid}
-          currentUid={user?.uid}
-          initialConversationId={initialConversationId}
-        />
+        <div id="dm">
+          <ChatBox
+            itemId={Number(data.id)}
+            sellerUid={data.sellerUid}
+            currentUid={user?.uid}
+            initialConversationId={initialConversationId}
+            purchaseConversationId={activePurchase?.conversationId ?? null}
+          />
+        </div>
       </div>
     </div>
   );
 }
-import { categories } from "@/constants/categories";

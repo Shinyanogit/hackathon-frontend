@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteMessage, listConversations } from "@/lib/api/conversations";
+import { deleteMessage, listConversations, listMessages, sendMessage } from "@/lib/api/conversations";
 import { fetchThread, ThreadMessage } from "@/lib/api/items";
 import { fetchPublicUser } from "@/lib/api/users";
 import { useAuth } from "@/context/AuthContext";
@@ -12,6 +12,8 @@ type Props = {
   itemId: number;
   sellerUid?: string;
   currentUid?: string;
+  initialConversationId?: number | null;
+  purchaseConversationId?: number | null;
 };
 
 type PostMessageBody = {
@@ -21,7 +23,7 @@ type PostMessageBody = {
   senderIconUrl?: string | null;
 };
 
-export function ChatBox({ itemId, sellerUid, currentUid }: Props) {
+export function ChatBox({ itemId, sellerUid, currentUid, initialConversationId, purchaseConversationId }: Props) {
   const [body, setBody] = useState("");
   const [replyTo, setReplyTo] = useState<ThreadMessage | null>(null);
   const queryClient = useQueryClient();
@@ -38,12 +40,33 @@ export function ChatBox({ itemId, sellerUid, currentUid }: Props) {
   const threadQuery = useQuery({
     queryKey: ["thread", itemId],
     queryFn: () => fetchThread(itemId),
+    enabled: !purchaseConversationId,
   });
 
-  const messages: ThreadMessage[] = useMemo(
-    () => threadQuery.data?.messages ?? [],
-    [threadQuery.data?.messages]
-  );
+  const purchaseMessagesQuery = useQuery({
+    queryKey: ["messages", purchaseConversationId],
+    queryFn: () => listMessages(purchaseConversationId as number),
+    enabled: !!purchaseConversationId && isAuthenticated,
+  });
+
+  const messages: ThreadMessage[] = useMemo(() => {
+    if (purchaseConversationId) {
+      return (
+        purchaseMessagesQuery.data?.map((m) => ({
+          id: m.id,
+          conversationId: m.conversationId,
+          senderUid: m.senderUid,
+          senderName: m.senderName || m.senderUid,
+          senderIconUrl: m.senderIconUrl,
+          parentMessageId: null,
+          depth: 0,
+          body: m.body,
+          createdAt: m.createdAt,
+        })) ?? []
+      );
+    }
+    return threadQuery.data?.messages ?? [];
+  }, [purchaseConversationId, purchaseMessagesQuery.data, threadQuery.data?.messages]);
 
   const profileQueries = useQueries({
     queries: Array.from(new Set(messages.map((m) => m.senderUid))).map((uid) => ({
@@ -64,27 +87,52 @@ export function ChatBox({ itemId, sellerUid, currentUid }: Props) {
     return map;
   }, [profileQueries]);
 
-  const conversationId =
-    threadQuery.data?.conversationId ??
-    (isSellerViewingOwnItem
-      ? myConversations?.find((c) => c.itemId === itemId)?.conversationId ?? null
-      : null);
+  const conversationId = useMemo(
+    () =>
+      purchaseConversationId ??
+      threadQuery.data?.conversationId ??
+      initialConversationId ??
+      (isSellerViewingOwnItem
+        ? myConversations?.find((c) => c.itemId === itemId)?.conversationId ?? null
+        : null),
+    [
+      initialConversationId,
+      isSellerViewingOwnItem,
+      itemId,
+      myConversations,
+      purchaseConversationId,
+      threadQuery.data?.conversationId,
+    ]
+  );
 
   const sendMutation = useMutation({
-    mutationFn: (payload: PostMessageBody) =>
-      apiClient.post(`/items/${itemId}/messages`, payload).then((r) => r.data),
+    mutationFn: (payload: PostMessageBody) => {
+      if (purchaseConversationId && conversationId) {
+        return sendMessage(conversationId, payload.text, payload.senderName, payload.senderIconUrl);
+      }
+      return apiClient.post(`/items/${itemId}/messages`, payload).then((r) => r.data);
+    },
     onSuccess: () => {
       setBody("");
       setReplyTo(null);
-      queryClient.invalidateQueries({ queryKey: ["thread", itemId] });
-      queryClient.invalidateQueries({ queryKey: ["conversations", currentUid] });
+      if (purchaseConversationId && conversationId) {
+        queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
+        queryClient.invalidateQueries({ queryKey: ["conversations", currentUid] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["thread", itemId] });
+        queryClient.invalidateQueries({ queryKey: ["conversations", currentUid] });
+      }
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (messageId: number) => deleteMessage(conversationId as number, messageId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["thread", itemId] });
+      if (purchaseConversationId && conversationId) {
+        queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["thread", itemId] });
+      }
     },
   });
 

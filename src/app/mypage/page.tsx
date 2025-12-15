@@ -6,8 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAuth, updateProfile } from "firebase/auth";
 import { useAuth } from "@/context/AuthContext";
-import { fetchMyItems } from "@/lib/api/items";
-import { updateItem } from "@/lib/api/items";
+import { fetchMyItems, updateItem } from "@/lib/api/items";
+import { fetchMyPurchases, fetchMySales } from "@/lib/api/purchases";
 import { ItemCard } from "@/components/item/ItemCard";
 import { storage } from "@/lib/firebase";
 import { Header } from "@/components/layout/Header";
@@ -17,7 +17,7 @@ export default function MyPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"items" | "history" | "likes" | "settings">("items");
+  const [tab, setTab] = useState<"items" | "purchases" | "history" | "likes" | "settings">("items");
   const displayName = user?.displayName ?? "ゲストユーザー";
   const email = user?.email ?? "";
 
@@ -26,6 +26,17 @@ export default function MyPage() {
     queryFn: fetchMyItems,
     enabled: !!user,
   });
+  const { data: myPurchases } = useQuery({
+    queryKey: ["me", "purchases"],
+    queryFn: fetchMyPurchases,
+    enabled: !!user,
+  });
+  const { data: mySales } = useQuery({
+    queryKey: ["me", "sales"],
+    queryFn: fetchMySales,
+    enabled: !!user,
+  });
+  const [purchaseFilter, setPurchaseFilter] = useState<"active" | "completed">("active");
   const myItems = data?.items ?? [];
   const [displayNameInput, setDisplayNameInput] = useState(displayName);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
@@ -260,6 +271,7 @@ export default function MyPage() {
           <div className="flex flex-wrap gap-2">
             {[
               { key: "items", label: "自分の出品" },
+              { key: "purchases", label: "取引・購入" },
               { key: "history", label: "閲覧履歴" },
               { key: "likes", label: "いいねした商品" },
             ].map((t) => (
@@ -341,101 +353,159 @@ export default function MyPage() {
           )}
 
           {tab === "items" && (
-            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                    My Listings
-                  </p>
-                  <h2 className="text-lg font-semibold text-slate-900">あなたの出品</h2>
-                </div>
-                <Link
-                  href="/sell"
-                  className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-                >
-                  出品する
-                </Link>
-              </div>
-            <p className="mt-2 text-sm text-slate-600">出品中の商品がここに表示されます。</p>
-            {isLoading && <p className="mt-4 text-sm text-slate-500">読み込み中...</p>}
-            {!isLoading && myItems.length === 0 && (
-              <p className="mt-4 text-sm text-slate-500">まだ出品がありません。</p>
-            )}
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {myItems.map((item) => (
-                <div key={item.id} className="space-y-2">
-                  <ItemCard item={item} />
-                  <button
-                    onClick={() => startEdit(item)}
-                    className="w-full rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
-                  >
-                    編集
-                  </button>
-                </div>
-              ))}
-            </div>
-            {editingId && (
-              <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-900">出品内容を編集（ID: {editingId}）</p>
-                <input
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  placeholder="タイトル"
-                />
-                <textarea
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="説明"
-                  rows={3}
-                />
-                <input
-                  type="number"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                  placeholder="価格"
-                />
-                <input
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
-                  value={editImageUrl}
-                  onChange={(e) => setEditImageUrl(e.target.value)}
-                  placeholder="画像URL"
-                />
-                <select
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value)}
-                >
-                  <option value="">カテゴリを選択</option>
-                  {categories
-                    .filter((c) => c.slug)
-                    .map((c) => (
-                      <option key={c.slug} value={c.slug}>
-                        {c.label}
-                      </option>
-                    ))}
-                </select>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={submitEdit}
+            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-8">
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                      My Listings
+                    </p>
+                    <h2 className="text-lg font-semibold text-slate-900">あなたの出品</h2>
+                  </div>
+                  <Link
+                    href="/sell"
                     className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
                   >
-                    更新する
-                  </button>
-                  <button
-                    onClick={() => setEditingId(null)}
-                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
-                  >
-                    キャンセル
-                  </button>
-                  {editMessage && <span className="text-xs text-slate-500">{editMessage}</span>}
+                    出品する
+                  </Link>
+                </div>
+                <p className="mt-2 text-sm text-slate-600">出品中の商品がここに表示されます。</p>
+                {isLoading && <p className="mt-4 text-sm text-slate-500">読み込み中...</p>}
+                {!isLoading && myItems.length === 0 && (
+                  <p className="mt-4 text-sm text-slate-500">まだ出品がありません。</p>
+                )}
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {myItems.map((item) => (
+                    <div key={item.id} className="space-y-2">
+                      <ItemCard item={item} />
+                      <button
+                        onClick={() => startEdit(item)}
+                        className="w-full rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
+                      >
+                        編集
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {editingId && (
+                  <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-semibold text-slate-900">出品内容を編集（ID: {editingId}）</p>
+                    <input
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="タイトル"
+                    />
+                    <textarea
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="説明"
+                      rows={3}
+                    />
+                    <input
+                      type="number"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                      placeholder="価格"
+                    />
+                    <input
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                      value={editImageUrl}
+                      onChange={(e) => setEditImageUrl(e.target.value)}
+                      placeholder="画像URL"
+                    />
+                    <select
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                      value={editCategory}
+                      onChange={(e) => setEditCategory(e.target.value)}
+                    >
+                      <option value="">カテゴリを選択</option>
+                      {categories
+                        .filter((c) => c.slug)
+                        .map((c) => (
+                          <option key={c.slug} value={c.slug}>
+                            {c.label}
+                          </option>
+                        ))}
+                    </select>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={submitEdit}
+                        className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                      >
+                        更新する
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
+                      >
+                        キャンセル
+                      </button>
+                      {editMessage && <span className="text-xs text-slate-500">{editMessage}</span>}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                      Sales
+                    </p>
+                    <h3 className="text-lg font-semibold text-slate-900">取引中 / 売却済み（出品分）</h3>
+                  </div>
+                </div>
+                <p className="mt-2 text-sm text-slate-600">
+                  自分が出品して購入された商品のステータスです（発送待ち / 発送済み / 受取完了 / キャンセル）。
+                </p>
+                {!mySales && <p className="mt-4 text-sm text-slate-500">読み込み中...</p>}
+                {mySales && mySales.length === 0 && (
+                  <p className="mt-4 text-sm text-slate-500">まだ取引中の商品はありません。</p>
+                )}
+                <div className="mt-4 grid gap-4">
+                  {mySales?.map((row) => (
+                    <div
+                      key={row.purchase.id}
+                      className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={
+                              row.item.imageUrl && row.item.imageUrl.trim() !== ""
+                                ? row.item.imageUrl
+                                : "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=400&q=80"
+                            }
+                            alt={row.item.title}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 line-clamp-2">
+                            {row.item.title || `商品 #${row.purchase.itemId}`}
+                          </p>
+                          <p className="text-xs text-slate-500">¥{row.item.price?.toLocaleString?.() ?? "-"}</p>
+                          <p className="text-xs text-slate-500">ステータス: {row.purchase.status}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/items/${row.purchase.itemId}`}
+                          className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
+                        >
+                          商品ページ
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
-          </section>
-        )}
+            </section>
+          )}
 
           {tab === "history" && (
             <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -476,6 +546,90 @@ export default function MyPage() {
                 </Link>
               </div>
               <p className="mt-2 text-sm text-slate-600">いいね一覧は今後追加予定です。</p>
+            </section>
+          )}
+
+          {tab === "purchases" && (
+            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                    Purchases
+                  </p>
+                  <h2 className="text-lg font-semibold text-slate-900">取引中 / 購入済み</h2>
+                </div>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">
+                自分が購入した商品のステータスです（発送待ち / 発送済み / 受取完了 / キャンセル）。
+              </p>
+              <div className="mt-3 flex gap-2">
+                {[
+                  { key: "active", label: "取引中（発送待ち/発送済み）" },
+                  { key: "completed", label: "購入済み（受取完了）" },
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setPurchaseFilter(f.key as typeof purchaseFilter)}
+                    className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                      purchaseFilter === f.key
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "bg-white text-slate-700 border border-slate-200 hover:border-emerald-200 hover:text-emerald-700"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              {!myPurchases && <p className="mt-4 text-sm text-slate-500">読み込み中...</p>}
+              {myPurchases && myPurchases.length === 0 && (
+                <p className="mt-4 text-sm text-slate-500">購入履歴がまだありません。</p>
+              )}
+              <div className="mt-4 grid gap-4">
+                {myPurchases
+                  ?.filter((row) =>
+                    purchaseFilter === "active"
+                      ? row.purchase.status === "pending_shipment" || row.purchase.status === "shipped"
+                      : row.purchase.status === "delivered"
+                  )
+                  .map((row) => (
+                  <div
+                    key={row.purchase.id}
+                    className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={
+                            row.item.imageUrl && row.item.imageUrl.trim() !== ""
+                              ? row.item.imageUrl
+                              : "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=400&q=80"
+                          }
+                          alt={row.item.title}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 line-clamp-2">
+                          {row.item.title || `商品 #${row.purchase.itemId}`}
+                        </p>
+                        <p className="text-xs text-slate-500">¥{row.item.price?.toLocaleString?.() ?? "-"}</p>
+                        <p className="text-xs text-slate-500">
+                          ステータス: {row.purchase.status}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/items/${row.purchase.itemId}`}
+                        className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
+                      >
+                        商品ページ
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </section>
           )}
         </div>
