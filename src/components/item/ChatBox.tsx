@@ -20,7 +20,7 @@ type PostMessageBody = {
   text: string;
   parentMessageId?: number | null;
   senderName?: string;
-  senderIconUrl?: string | null;
+  senderIconUrl?: string;
 };
 
 export function ChatBox({ itemId, sellerUid, currentUid, initialConversationId, purchaseConversationId }: Props) {
