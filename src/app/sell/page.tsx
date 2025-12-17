@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { createItem } from "@/lib/api/items";
+import { createItem, estimateItemCO2, estimateItemCO2Preview } from "@/lib/api/items";
 import { enhanceImage } from "@/lib/api/ai";
 import { categories } from "@/constants/categories";
 import { auth, storage } from "@/lib/firebase";
@@ -31,9 +31,42 @@ export default function SellPage() {
     enhancedUrl: string;
     meta: { mode: string; strength: number; background: string; elapsedMs: number };
   } | null>(null);
+  const [previewCo2, setPreviewCo2] = useState<number | null>(null);
+  const [estimateNotice, setEstimateNotice] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<"original" | "ai">("original");
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const estimateMutation = useMutation({
+    mutationFn: (itemId: number) => estimateItemCO2(String(itemId)),
+  });
+  const previewMutation = useMutation({
+    mutationFn: async () => {
+      if (!title.trim() || !description.trim() || price === "") {
+        throw new Error("タイトル・説明・価格を入力してください");
+      }
+      const img = aiResult
+        ? selectedVersion === "ai"
+          ? aiResult.enhancedUrl
+          : aiResult.originalUrl
+        : undefined;
+      const res = await estimateItemCO2Preview({
+        title: title.trim(),
+        description: description.trim(),
+        price: Number(price),
+        imageUrl: typeof img === "string" ? img : undefined,
+      });
+      return res.co2Kg;
+    },
+    onSuccess: (val) => {
+      setPreviewCo2(val ?? null);
+      setEstimateNotice(null);
+    },
+    onError: (e: unknown) => {
+      const msg = e instanceof Error ? e.message : "CO2算出に失敗しました";
+      setEstimateNotice(msg);
+    },
+  });
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -65,8 +98,9 @@ export default function SellPage() {
       };
       return createItem(payload);
     },
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       setError(null);
+      setEstimateNotice(null);
       router.push(`/items/${res.id}`);
     },
     onError: (e: unknown) => {
@@ -313,6 +347,29 @@ export default function SellPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          <div className="space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/80 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-emerald-900">推定CO2削減量</p>
+                <p className="text-xs text-emerald-700">
+                  出品前に推定値を確認できます。Geminiで算出し、出品時にも自動で保存されます。
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => previewMutation.mutate()}
+                disabled={previewMutation.isPending || mutation.isPending}
+                className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              >
+                {previewMutation.isPending ? "算出中..." : "CO2を算出する"}
+              </button>
+            </div>
+            <div className="text-sm font-semibold text-emerald-900">
+              {previewCo2 != null ? `推定: ${previewCo2.toFixed(1)} kgCO2e` : "未算出"}
+            </div>
+            {estimateNotice && <p className="text-xs text-emerald-800">{estimateNotice}</p>}
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

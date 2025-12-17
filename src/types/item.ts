@@ -7,6 +7,7 @@ export type Item = {
   imageUrl?: string | null;
   categorySlug?: string;
   sellerUid?: string;
+  co2Kg?: number | null;
   createdAt: string;
   updatedAt: string;
 };

@@ -3,13 +3,14 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { useAuth } from "@/context/AuthContext";
 import { BellIcon } from "@/components/ui/icons/BellIcon";
 import { fetchNotifications, markAllNotificationsRead } from "@/lib/api/notifications";
 import type { Notification } from "@/types/notification";
+import { fetchItem } from "@/lib/api/items";
 
 type Props = {
   onSearch?: (query: string) => void;
@@ -51,6 +52,29 @@ export function Header({
     refetchInterval: 60000,
   });
   const unreadCount = notificationsData?.unreadCount ?? 0;
+  const itemQueries = useQueries({
+    queries:
+      notificationsData?.notifications
+        .filter((n) => n.itemId)
+        .map((n) => ({
+          queryKey: ["item", n.itemId],
+          queryFn: () => fetchItem(n.itemId as number),
+          enabled: true,
+          staleTime: 5 * 60 * 1000,
+        })) ?? [],
+  });
+  const itemMap = useMemo(() => {
+    const map = new Map<number, Awaited<ReturnType<typeof fetchItem>>>();
+    itemQueries.forEach((q, idx) => {
+      if (q.data) {
+        const itemId = notificationsData?.notifications.filter((n) => n.itemId)[idx].itemId;
+        if (itemId) {
+          map.set(Number(itemId), q.data);
+        }
+      }
+    });
+    return map;
+  }, [itemQueries, notificationsData]);
 
   useEffect(() => {
     if (!user) {
@@ -145,13 +169,28 @@ export function Header({
                               ? `/items/${n.itemId}`
                               : "#"
                         }
-                        className="block rounded-lg border border-slate-100 bg-white px-3 py-2 shadow-sm hover:border-emerald-200"
+                        className={`block rounded-lg border px-3 py-2 shadow-sm hover:border-emerald-200 ${
+                          n.read
+                            ? "border-slate-100 bg-white"
+                            : "border-emerald-100 bg-emerald-50"
+                        }`}
                         onClick={async () => {
                           setNotifOpen(false);
                           await refetchNotifications();
                         }}
                       >
-                        <div className="flex items-start gap-2">
+                        <div className="flex items-start gap-3">
+                          <div className="h-10 w-10 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={
+                                (n.itemId && itemMap.get(Number(n.itemId))?.imageUrl) ||
+                                "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=200&q=60"
+                              }
+                              alt={n.title || "item image"}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
                             <BellIcon className="h-4 w-4 text-emerald-700" />
                           </div>

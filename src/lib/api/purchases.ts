@@ -1,8 +1,8 @@
 import { ApiError, apiClient } from "@/lib/apiClient";
 import { Purchase, PurchaseWithItem } from "@/types/purchase";
 
-export async function purchaseItem(itemId: number | string) {
-  return apiClient.post<Purchase>(`/items/${itemId}/purchase`);
+export async function purchaseItem(itemId: number | string, pointsUsed?: number) {
+  return apiClient.post<Purchase>(`/items/${itemId}/purchase`, pointsUsed ? { pointsUsed } : undefined);
 }
 
 export async function fetchPurchase(itemId: number | string) {

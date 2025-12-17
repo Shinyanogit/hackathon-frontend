@@ -66,9 +66,9 @@ const copy: Record<
     searchPlaceholder: "アイテム名、ブランド、サイズで検索",
     hero: {
       badge: "次世代フリマ",
-      title: "昔好きだった物を、\n今好きな人へ。",
+      title: "綺麗になる部屋、\n綺麗になる地球。",
       description:
-        "出品も購入もストレスなく。\nすぐに見つかる次の持ち主。",
+        "部屋の邪魔者をスムーズ出品。\n資源を有効活用。",
       primaryCta: "出品を始める",
       secondaryCta: "商品を探す",
       searchPlaceholder: "\"デニムジャケット\" \"ナイキ スニーカー\" などで検索",

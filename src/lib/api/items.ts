@@ -66,6 +66,19 @@ export async function updateItem(
   return apiClient.put<Item>(`/items/${id}`, payload);
 }
 
+export async function estimateItemCO2(id: number | string) {
+  return apiClient.post<{ co2Kg: number | null }>(`/items/${id}/estimate-co2`);
+}
+
+export async function estimateItemCO2Preview(payload: {
+  title: string;
+  description: string;
+  price: number;
+  imageUrl?: string;
+}) {
+  return apiClient.post<{ co2Kg: number | null; rid: string }>(`/items/estimate-co2-preview`, payload);
+}
+
 export async function fetchMyItems() {
   return apiClient.get<ItemListResponse>("/me/items");
 }

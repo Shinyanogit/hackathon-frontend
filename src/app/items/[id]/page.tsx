@@ -9,12 +9,15 @@ import { PurchasePanel } from "@/components/item/PurchasePanel";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/context/AuthContext";
 import { categories } from "@/constants/categories";
-import { fetchItem, updateItem } from "@/lib/api/items";
+import { estimateItemCO2, fetchItem, updateItem } from "@/lib/api/items";
 import { fetchPurchase } from "@/lib/api/purchases";
 import { fetchPublicUser } from "@/lib/api/users";
 import { storage } from "@/lib/firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { ApiError } from "@/lib/apiClient";
+import { enhanceImage } from "@/lib/api/ai";
 import { useEffect, useState } from "react";
+import type React from "react";
 
 export default function ItemDetailPage() {
   const queryClient = useQueryClient();
@@ -33,6 +36,10 @@ export default function ItemDetailPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [aiEnhancing, setAiEnhancing] = useState(false);
+  const [aiMessage, setAiMessage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["item", id],
@@ -77,6 +84,34 @@ export default function ItemDetailPage() {
   const isOwner = !!(user?.uid && data?.sellerUid === user.uid);
   const isBuyer = !!(activePurchase && user?.uid && activePurchase.buyerUid === user.uid);
   const soldViewOnly = isSold && !isOwner && !isBuyer;
+  const TREE_CO2_KG_PER_YEAR = 10;
+  const treeYears =
+    data?.co2Kg != null ? Number((data.co2Kg / TREE_CO2_KG_PER_YEAR).toFixed(1)) : null;
+  const [estimating, setEstimating] = useState(false);
+  const [estimateMsg, setEstimateMsg] = useState<string | null>(null);
+
+  const runEstimate = async () => {
+    if (!id) return;
+    setEstimating(true);
+    setEstimateMsg(null);
+    try {
+      const res = await estimateItemCO2(id as string);
+      setEstimateMsg(
+        res.co2Kg != null ? `推定CO2: ${res.co2Kg.toFixed(1)} kgCO2e` : "推定できませんでした"
+      );
+      await queryClient.invalidateQueries({ queryKey: ["item", id] });
+    } catch (e) {
+      const msg =
+        e instanceof ApiError && (e.status === 504 || e.status === 502)
+          ? "再計算に失敗しました。時間をおいて再試行してください（timeout）"
+          : e instanceof Error
+            ? e.message
+            : "推定に失敗しました";
+      setEstimateMsg(msg);
+    } finally {
+      setEstimating(false);
+    }
+  };
 
   useEffect(() => {
     if (!data) return;
@@ -86,6 +121,30 @@ export default function ItemDetailPage() {
     setCategory(data.categorySlug ?? "");
     setImagePreview(data.imageUrl ?? null);
   }, [data]);
+
+  const handleLocalFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+    setImageFile(file);
+    setAiMessage(null);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    handleLocalFile(f);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) {
+      handleLocalFile(f);
+    }
+  };
 
   const handleSave = async () => {
     if (!isOwner || !id) return;
@@ -159,7 +218,10 @@ export default function ItemDetailPage() {
           ← トップに戻る
         </Link>
         <div className="mt-4 grid gap-8 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm md:grid-cols-[1.2fr_1fr]">
-          <div className="relative overflow-hidden rounded-2xl bg-slate-100">
+          <div
+            className="relative overflow-hidden rounded-2xl bg-slate-100 cursor-zoom-in"
+            onClick={() => setShowImageModal(true)}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={data.imageUrl && data.imageUrl.trim() !== "" ? data.imageUrl : fallbackImage}
@@ -214,18 +276,7 @@ export default function ItemDetailPage() {
             <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
               {data.description}
             </p>
-            {data.imageUrl && (
-              <div>
-                <a
-                  href={data.imageUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex text-sm font-semibold text-emerald-700 hover:text-emerald-800"
-                >
-                  画像を開く
-                </a>
-              </div>
-            )}
+            {estimateMsg && <p className="text-xs text-slate-600">{estimateMsg}</p>}
             {!isOwner && !soldViewOnly && (
               <GeminiAsk
                 itemId={Number(data.id)}
@@ -240,6 +291,8 @@ export default function ItemDetailPage() {
             <PurchasePanel
               itemId={Number(data.id)}
               price={data.price}
+              treeYears={treeYears}
+              treePoints={treeYears}
               sellerUid={data.sellerUid}
               purchase={activePurchase ?? null}
               itemStatus={data.status as any}
@@ -296,23 +349,29 @@ export default function ItemDetailPage() {
                     </select>
                     <div className="space-y-2">
                       <label className="text-sm font-semibold text-slate-800">画像ファイル</label>
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0] || null;
-                            setImageFile(f);
-                            if (f) {
-                              const reader = new FileReader();
-                              reader.onload = () => setImagePreview(reader.result as string);
-                              reader.readAsDataURL(f);
-                            }
-                          }}
-                        />
-                        画像を選択
-                      </label>
+                      <div
+                        className={`flex flex-col gap-2 rounded-lg border border-dashed px-3 py-4 text-sm transition sm:flex-row sm:items-center ${
+                          isDragging ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-slate-50"
+                        }`}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDragging(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDragging(false);
+                        }}
+                        onDrop={handleDrop}
+                      >
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                          <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                          <span>画像ファイルを選択</span>
+                        </label>
+                        <div className="text-xs text-slate-500">またはここにドラッグ＆ドロップ</div>
+                        {imageFile && <span className="text-xs text-slate-500">選択中: {imageFile.name}</span>}
+                      </div>
                       {imagePreview && (
                         <div className="h-32 w-32 overflow-hidden rounded-lg border border-slate-200">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -320,7 +379,7 @@ export default function ItemDetailPage() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         onClick={handleSave}
                         disabled={saving}
@@ -328,7 +387,48 @@ export default function ItemDetailPage() {
                       >
                         保存する
                       </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!imageFile) {
+                            setAiMessage("先に画像ファイルを選択してください");
+                            return;
+                          }
+                          try {
+                            setAiEnhancing(true);
+                            setAiMessage("AIで背景を補正中…");
+                            const res = await enhanceImage({
+                              image: imageFile,
+                              itemId: String(id),
+                              category: category || data.categorySlug,
+                              mode: "auto",
+                              background: "white",
+                            });
+                            setImagePreview(res.enhancedUrl);
+                            setImageFile(null);
+                            setAiMessage("背景を白でクリーンアップしました");
+                          } catch (e: unknown) {
+                            const msg = e instanceof Error ? e.message : "AI背景補正に失敗しました";
+                            setAiMessage(msg);
+                          } finally {
+                            setAiEnhancing(false);
+                          }
+                        }}
+                        disabled={aiEnhancing || saving}
+                        className="rounded-full border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800 disabled:cursor-not-allowed disabled:border-slate-100 disabled:text-slate-400"
+                      >
+                        {aiEnhancing ? "AI補正中..." : "AIで背景をきれいにする"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={runEstimate}
+                        disabled={estimating}
+                        className="rounded-full border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800 disabled:cursor-not-allowed disabled:border-slate-100 disabled:text-slate-400"
+                      >
+                        {estimating ? "査定中..." : "CO2を再計算"}
+                      </button>
                       {message && <span className="text-xs text-slate-600">{message}</span>}
+                      {aiMessage && <span className="text-xs text-slate-600">{aiMessage}</span>}
                     </div>
                   </div>
                 )}
@@ -352,6 +452,24 @@ export default function ItemDetailPage() {
           )}
         </div>
       </div>
+      {showImageModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div
+            className="max-h-[90vh] max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={data.imageUrl && data.imageUrl.trim() !== "" ? data.imageUrl : fallbackImage}
+              alt={data.title}
+              className="max-h-[90vh] w-auto max-w-full object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

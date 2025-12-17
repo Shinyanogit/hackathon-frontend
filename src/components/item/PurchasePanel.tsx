@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/apiClient";
 import {
@@ -15,6 +15,8 @@ import { Purchase, PurchaseStatus } from "@/types/purchase";
 type Props = {
   itemId: number;
   price: number;
+  treeYears?: number | null;
+  treePoints?: number | null;
   sellerUid?: string;
   purchase: Purchase | null;
   onChanged?: () => void;
@@ -63,10 +65,23 @@ function StatusBadge({ status }: { status: PurchaseStatus }) {
   );
 }
 
-export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged, itemStatus }: Props) {
+export function PurchasePanel({
+  itemId,
+  price,
+  treeYears,
+  treePoints,
+  sellerUid,
+  purchase,
+  onChanged,
+  itemStatus,
+}: Props) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const [pointsInput, setPointsInput] = useState<string>("");
+  const [celebrate, setCelebrate] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const prevStatus = useRef<PurchaseStatus | null>(purchase?.status ?? null);
 
   const isCanceled = purchase?.status === "canceled";
   const isSeller = !!user && sellerUid === user.uid;
@@ -75,9 +90,17 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged, i
   const canPurchase = !!user && !sold && !isSeller;
 
   const purchaseMutation = useMutation({
-    mutationFn: () => purchaseItem(itemId),
+    mutationFn: () => purchaseItem(itemId, pointsInput ? Number(pointsInput) : undefined),
     onSuccess: () => {
       setError(null);
+      const tYears = treeYears ?? null;
+      const treesText = tYears != null ? `${tYears.toFixed(1)} 本` : "";
+      setToast(
+        treesText
+          ? `取引成立！このリユースで約 ${treesText} の木が1年で吸収するCO2相当を節約できます！`
+          : "取引成立！リユースで資源が節約できます。"
+      );
+      setPointsInput("");
       onChanged?.();
       queryClient.invalidateQueries({ queryKey: ["thread", itemId] });
       queryClient.invalidateQueries({ queryKey: ["conversations", user?.uid] });
@@ -91,6 +114,31 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged, i
       setError(msg);
     },
   });
+
+  useEffect(() => {
+    const current = purchase?.status ?? null;
+    // 取引成立（初回購入）
+    if (prevStatus.current === null && current === "pending_shipment") {
+      const treesText = treeYears != null ? `${treeYears.toFixed(1)} 本` : "";
+      setToast(
+        treesText
+          ? `取引成立！このリユースで約 ${treesText} の木が1年で吸収するCO2相当を節約できます！`
+          : "取引成立！リユースで資源が節約できます。"
+      );
+    }
+    // 取引完了（受取完了）
+    if (prevStatus.current !== "delivered" && current === "delivered") {
+      const treesText = treeYears != null ? `${treeYears.toFixed(1)} 本` : "";
+      const pts = treePoints != null ? `+${treePoints.toFixed(1)}pt` : "";
+      setToast(
+        treesText
+          ? `購入完了！約 ${treesText} の木相当の資源を節約できました！ ${pts}`
+          : `購入完了！資源を節約できました！ ${pts}`
+      );
+      setCelebrate(treesText ? `資源を節約しました！ ${pts}` : pts || null);
+    }
+    prevStatus.current = current;
+  }, [purchase?.status, treePoints, treeYears]);
 
   const shipMutation = useMutation({
     mutationFn: (purchaseId: number) => markShipped(purchaseId),
@@ -145,6 +193,11 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged, i
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      {toast && (
+        <div className="mb-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 shadow-sm">
+          {toast}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
@@ -153,15 +206,50 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged, i
           <h3 className="text-lg font-bold text-slate-900">{headline}</h3>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-2xl font-bold text-slate-900">¥{price.toLocaleString()}</p>
+          <div className="flex flex-col">
+            <p className="text-2xl font-bold text-slate-900">¥{price.toLocaleString()}</p>
+            {(treeYears != null || treePoints != null) && (
+              <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-700">
+                <span>
+                  木 {treeYears != null ? treeYears.toFixed(1) : "—"} 年 / +{treePoints != null ? treePoints.toFixed(1) : "—"} pt
+                </span>
+                <div className="relative group">
+                  <button
+                    type="button"
+                    aria-label="ポイント説明"
+                    className="flex h-5 w-5 items-center justify-center rounded-full border border-emerald-200 bg-white text-[10px] font-bold text-emerald-700 shadow-sm hover:bg-emerald-50"
+                  >
+                    ?
+                  </button>
+                  <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 hidden w-56 -translate-x-1/2 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-[11px] font-medium text-slate-700 shadow-lg group-hover:block">
+                    このリユースで、木が約 {treeYears != null ? treeYears.toFixed(1) : "—"} 年で吸収するCO2相当の資源が節約されます。
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           {canPurchase && (
-            <button
-              className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
-              onClick={() => purchaseMutation.mutate()}
-              disabled={purchaseMutation.isPending}
-            >
-              {purchaseMutation.isPending ? "処理中..." : "購入する"}
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.1"
+                  value={pointsInput}
+                  onChange={(e) => setPointsInput(e.target.value)}
+                  placeholder="使うpt"
+                  className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-1 focus:ring-emerald-200"
+                />
+                <span className="text-[11px] text-slate-500">ポイント利用（任意）</span>
+              </div>
+              <button
+                className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                onClick={() => purchaseMutation.mutate()}
+                disabled={purchaseMutation.isPending}
+              >
+                {purchaseMutation.isPending ? "処理中..." : "購入する"}
+              </button>
+            </div>
           )}
           {purchase && <StatusBadge status={purchase.status} />}
           {!purchase && sold && (
@@ -194,6 +282,11 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged, i
 
         {user && purchase && !isCanceled && (
           <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            {celebrate && (
+              <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
+                {celebrate}
+              </div>
+            )}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold text-slate-900">

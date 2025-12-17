@@ -8,6 +8,8 @@ import { getAuth, updateProfile } from "firebase/auth";
 import { useAuth } from "@/context/AuthContext";
 import { fetchMyItems, updateItem } from "@/lib/api/items";
 import { fetchMyPurchases, fetchMySales } from "@/lib/api/purchases";
+import { fetchRevenue, withdrawRevenue } from "@/lib/api/revenue";
+import { fetchTreePoints } from "@/lib/api/treePoints";
 import { ItemCard } from "@/components/item/ItemCard";
 import { storage } from "@/lib/firebase";
 import { Header } from "@/components/layout/Header";
@@ -38,6 +40,18 @@ export default function MyPage() {
     queryFn: fetchMySales,
     enabled: !!user,
   });
+  const { data: revenueData, refetch: refetchRevenue } = useQuery({
+    queryKey: ["me", "revenue"],
+    queryFn: fetchRevenue,
+    enabled: !!user,
+  });
+  const { data: treeData, refetch: refetchTree } = useQuery({
+    queryKey: ["me", "tree-points"],
+    queryFn: fetchTreePoints,
+    enabled: !!user,
+  });
+  const [withdrawAmount, setWithdrawAmount] = useState<number | "">("");
+  const [withdrawMsg, setWithdrawMsg] = useState<string | null>(null);
   const myItems = data?.items ?? [];
   const [displayNameInput, setDisplayNameInput] = useState(displayName);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
@@ -169,6 +183,57 @@ export default function MyPage() {
       />
       <main className="min-h-screen bg-white px-4 py-10">
         <div className="mx-auto flex max-w-5xl flex-col space-y-8">
+          <section className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-emerald-900">売上とツリーポイント</h2>
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-white/50 bg-white/80 p-4 shadow-sm">
+                <p className="text-sm font-semibold text-slate-800">売上残高</p>
+                <p className="text-2xl font-bold text-emerald-700">
+                  ¥{((revenueData?.revenueCents ?? 0) / 100).toLocaleString()}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="w-32 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                    placeholder="出金額"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (withdrawAmount === "" || withdrawAmount <= 0) {
+                        setWithdrawMsg("金額を入力してください");
+                        return;
+                      }
+                      try {
+                        await withdrawRevenue(Math.round(Number(withdrawAmount) * 100));
+                        setWithdrawMsg("売上を減算しました");
+                        setWithdrawAmount("");
+                        refetchRevenue();
+                      } catch (e: unknown) {
+                        const msg = e instanceof Error ? e.message : "出金に失敗しました";
+                        setWithdrawMsg(msg);
+                      }
+                    }}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                  >
+                    売上から出金
+                  </button>
+                </div>
+                {withdrawMsg && <p className="mt-2 text-xs text-slate-600">{withdrawMsg}</p>}
+              </div>
+              <div className="rounded-xl border border-white/50 bg-white/80 p-4 shadow-sm">
+                <p className="text-sm font-semibold text-slate-800">ツリーポイント</p>
+                <p className="text-lg font-bold text-emerald-700">
+                  累計 {treeData?.total?.toFixed(1) ?? "0.0"} / 残高 {treeData?.balance?.toFixed(1) ?? "0.0"} pt
+                </p>
+                <p className="mt-2 text-xs text-slate-600">
+                  取引完了ごとにCO2換算の木年数ポイントが付与されます。ポイントは購入画面で利用できます。
+                </p>
+              </div>
+            </div>
+          </section>
           <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
