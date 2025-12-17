@@ -2,15 +2,14 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { useAuth } from "@/context/AuthContext";
 import { BellIcon } from "@/components/ui/icons/BellIcon";
-import { listConversations, listMessages, markConversationRead } from "@/lib/api/conversations";
-import { fetchItem } from "@/lib/api/items";
-import { fetchPublicUser } from "@/lib/api/users";
+import { fetchNotifications, markAllNotificationsRead } from "@/lib/api/notifications";
+import type { Notification } from "@/types/notification";
 
 type Props = {
   onSearch?: (query: string) => void;
@@ -44,112 +43,39 @@ export function Header({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [notifOpen, setNotifOpen] = useState(false);
-  const [dismissed, setDismissed] = useState<Set<number>>(new Set());
-  const { data: conversations } = useQuery({
-    queryKey: ["conversations", user?.uid],
-    queryFn: listConversations,
+  const notifRef = useRef<HTMLDivElement | null>(null);
+  const { data: notificationsData, refetch: refetchNotifications } = useQuery({
+    queryKey: ["me", "notifications", "header"],
+    queryFn: () => fetchNotifications({ unreadOnly: false, limit: 20 }),
     enabled: !!user,
+    refetchInterval: 60000,
   });
-  const displayConversations =
-    conversations?.filter((cv) => !dismissed.has(cv.conversationId)) ?? [];
-  const unreadCount =
-    conversations?.filter((cv) => cv.hasUnread === true && !dismissed.has(cv.conversationId))
-      .length ?? 0;
+  const unreadCount = notificationsData?.unreadCount ?? 0;
 
   useEffect(() => {
     if (!user) {
       setNotifOpen(false);
-      setDismissed(new Set());
     }
   }, [user]);
 
-  const itemsQueries = useQueries({
-    queries:
-      conversations?.map((cv) => ({
-        queryKey: ["item", cv.itemId],
-        queryFn: () => fetchItem(cv.itemId),
-        enabled: true,
-        staleTime: 5 * 60 * 1000,
-      })) ?? [],
-  });
-
-  const messagesQueries = useQueries({
-    queries:
-      conversations?.map((cv) => ({
-        queryKey: ["messages", cv.conversationId],
-        queryFn: () => listMessages(cv.conversationId),
-        enabled: true,
-        staleTime: 30 * 1000,
-      })) ?? [],
-  });
-
-  const partnerQueries = useQueries({
-    queries:
-      conversations?.map((cv) => {
-        const partnerUid = user?.uid === cv.sellerUid ? cv.buyerUid : cv.sellerUid;
-        return {
-          queryKey: ["public-user", partnerUid],
-          queryFn: () => fetchPublicUser(partnerUid),
-          enabled: !!partnerUid,
-          staleTime: 5 * 60 * 1000,
-        };
-      }) ?? [],
-  });
-
-  const itemMap = useMemo(() => {
-    const map = new Map<number, Awaited<ReturnType<typeof fetchItem>>>();
-    itemsQueries.forEach((q, idx) => {
-      if (q.data) {
-        map.set(conversations![idx].itemId, q.data);
+  useEffect(() => {
+    if (!notifOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
       }
-    });
-    return map;
-  }, [itemsQueries, conversations]);
-
-  const lastMessageMap = useMemo(() => {
-    const map = new Map<number, string>();
-    messagesQueries.forEach((q, idx) => {
-      const msgs = q.data;
-      if (msgs && msgs.length > 0) {
-        map.set(conversations![idx].conversationId, msgs[msgs.length - 1].body);
-      }
-    });
-    return map;
-  }, [messagesQueries, conversations]);
-
-  const partnerMap = useMemo(() => {
-    const map = new Map<string, Awaited<ReturnType<typeof fetchPublicUser>>>();
-    partnerQueries.forEach((q, idx) => {
-      const cv = conversations?.[idx];
-      if (cv && q.data?.uid) {
-        map.set(q.data.uid, q.data);
-      }
-    });
-    return map;
-  }, [partnerQueries, conversations]);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [notifOpen]);
 
   const openNotifications = async () => {
     if (notifOpen) {
       setNotifOpen(false);
       return;
     }
-    if (conversations && conversations.length > 0) {
-      await Promise.all(
-        conversations.map((c) => markConversationRead(c.conversationId).catch(() => {}))
-      );
-      // 楽観的に未読をクリア
-      setDismissed(new Set(conversations.map((c) => c.conversationId)));
-      queryClient.setQueryData(["conversations", user?.uid], (old: typeof conversations) =>
-        old
-          ? old.map((cv) =>
-              conversations.find((c) => c.conversationId === cv.conversationId)
-                ? { ...cv, hasUnread: false }
-                : cv
-            )
-          : old
-      );
-      queryClient.invalidateQueries({ queryKey: ["conversations", user?.uid] });
-    }
+    await markAllNotificationsRead().catch(() => {});
+    await queryClient.invalidateQueries({ queryKey: ["me", "notifications", "header"] });
     setNotifOpen(true);
   };
 
@@ -192,9 +118,12 @@ export function Header({
                 )}
               </button>
               {notifOpen && (
-                <div className="absolute right-0 z-40 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                <div
+                  ref={notifRef}
+                  className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+                >
                   <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                    <p className="text-sm font-semibold text-slate-900">DM通知</p>
+                    <p className="text-sm font-semibold text-slate-900">通知</p>
                     <button
                       className="text-xs font-semibold text-slate-500 hover:text-slate-700"
                       onClick={() => setNotifOpen(false)}
@@ -203,58 +132,44 @@ export function Header({
                     </button>
                   </div>
                   <div className="max-h-64 overflow-y-auto px-4 py-3 text-sm text-slate-800">
-                    {displayConversations.length === 0 && (
+                    {notificationsData?.notifications.length === 0 && (
                       <p className="text-xs text-slate-500">通知はありません。</p>
                     )}
-                    {displayConversations.map((cv) => (
+                    {notificationsData?.notifications.map((n: Notification) => (
                       <Link
-                        key={cv.conversationId}
-                        href={`/items/${cv.itemId}?conversationId=${cv.conversationId}`}
+                        key={n.id}
+                        href={
+                          n.conversationId
+                            ? `/items/${n.itemId ?? ""}?conversationId=${n.conversationId}`
+                            : n.itemId
+                              ? `/items/${n.itemId}`
+                              : "#"
+                        }
                         className="block rounded-lg border border-slate-100 bg-white px-3 py-2 shadow-sm hover:border-emerald-200"
                         onClick={async () => {
                           setNotifOpen(false);
-                          await markConversationRead(cv.conversationId).catch(() => {});
-                          setDismissed((prev) => {
-                            const next = new Set(prev);
-                            next.add(cv.conversationId);
-                            return next;
-                          });
+                          await refetchNotifications();
                         }}
                       >
-                        {(() => {
-                          const partnerUid = cv.sellerUid === user?.uid ? cv.buyerUid : cv.sellerUid;
-                          const partner = partnerUid ? partnerMap.get(partnerUid) : undefined;
-                          const partnerName = partner?.displayName || partnerUid || "Unknown";
-                          const partnerPhoto =
-                            partner?.photoURL ||
-                            "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=200&q=60";
-                          const itemTitle = itemMap.get(cv.itemId)?.title || `商品ID: ${cv.itemId}`;
-                          const lastBody = lastMessageMap.get(cv.conversationId) || "新しいメッセージがあります";
-                          const sentence = `「${itemTitle}」へのメッセージ: ${lastBody}`;
-                          return (
                         <div className="flex items-start gap-2">
-                          <div className="h-8 w-8 overflow-hidden rounded-full bg-slate-100">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={partnerPhoto}
-                              alt={partnerName}
-                              className="h-full w-full object-cover"
-                            />
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+                            <BellIcon className="h-4 w-4 text-emerald-700" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-xs font-semibold text-slate-700">
-                              {itemTitle}
+                            <p className="text-xs font-semibold text-slate-700">{n.title || "通知"}</p>
+                            <p className="text-[11px] text-slate-500 line-clamp-3 whitespace-pre-line">
+                              {n.body}
                             </p>
-                            <p className="text-[11px] text-slate-500">
-                              相手: {partnerName}
-                            </p>
-                            <p className="text-[11px] text-slate-500 line-clamp-2">
-                              {sentence}
+                            <p className="text-[10px] text-slate-400">
+                              {new Date(n.createdAt).toLocaleString()}
                             </p>
                           </div>
+                          {!n.read && (
+                            <span className="mt-1 inline-flex h-5 items-center rounded-full bg-emerald-600 px-2 text-[10px] font-bold uppercase tracking-wide text-white">
+                              NEW
+                            </span>
+                          )}
                         </div>
-                          );
-                        })()}
                       </Link>
                     ))}
                   </div>

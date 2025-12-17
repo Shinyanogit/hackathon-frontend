@@ -65,6 +65,7 @@ export default function MyPage() {
   const completedSales =
     mySales?.filter((row) => row.purchase.status === "delivered") ?? [];
 
+
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/");
@@ -213,8 +214,8 @@ export default function MyPage() {
               </div>
             </div>
 
-            {showProfileSettings && (
-              <div className="mt-6 space-y-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
+          {showProfileSettings && (
+            <div className="mt-6 space-y-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-800">表示名</label>
@@ -464,59 +465,7 @@ export default function MyPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                      Sales
-                    </p>
-                    <h3 className="text-lg font-semibold text-slate-900">取引中 / 売却済み（出品分）</h3>
-                  </div>
-                </div>
-                <p className="mt-2 text-sm text-slate-600">
-                  自分が出品して購入された商品のステータスです（発送待ち / 発送済み / 受取完了 / キャンセル）。
-                </p>
-                {!mySales && <p className="mt-4 text-sm text-slate-500">読み込み中...</p>}
-                {mySales && mySales.length === 0 && (
-                  <p className="mt-4 text-sm text-slate-500">まだ取引中の商品はありません。</p>
-                )}
-                <div className="mt-4 grid gap-4">
-                  {mySales?.map((row) => (
-                    <div
-                      key={row.purchase.id}
-                      className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={
-                              row.item.imageUrl && row.item.imageUrl.trim() !== ""
-                                ? row.item.imageUrl
-                                : "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=400&q=80"
-                            }
-                            alt={row.item.title}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900 line-clamp-2">
-                            {row.item.title || `商品 #${row.purchase.itemId}`}
-                          </p>
-                          <p className="text-xs text-slate-500">¥{row.item.price?.toLocaleString?.() ?? "-"}</p>
-                          <p className="text-xs text-slate-500">ステータス: {row.purchase.status}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Link
-                          href={`/items/${row.purchase.itemId}`}
-                          className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
-                        >
-                          商品ページ
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {/* 取引中/売却済み（出品分）は別タブで表示するため、このセクションからは除外 */}
               </div>
             </section>
           )}
