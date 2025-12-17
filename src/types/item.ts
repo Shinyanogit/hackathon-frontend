@@ -3,6 +3,7 @@ export type Item = {
   title: string;
   description: string;
   price: number;
+  status?: "listed" | "paused" | "in_transaction" | "sold" | string;
   imageUrl?: string | null;
   categorySlug?: string;
   sellerUid?: string;

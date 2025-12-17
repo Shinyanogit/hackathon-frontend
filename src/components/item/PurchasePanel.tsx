@@ -18,6 +18,7 @@ type Props = {
   sellerUid?: string;
   purchase: Purchase | null;
   onChanged?: () => void;
+  itemStatus?: "listed" | "paused" | "in_transaction" | "sold" | string;
 };
 
 const statusMeta: Record<
@@ -62,7 +63,7 @@ function StatusBadge({ status }: { status: PurchaseStatus }) {
   );
 }
 
-export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged }: Props) {
+export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged, itemStatus }: Props) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +71,7 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged }:
   const isCanceled = purchase?.status === "canceled";
   const isSeller = !!user && sellerUid === user.uid;
   const isBuyer = !!user && purchase?.buyerUid === user.uid;
-  const sold = !!purchase && !isCanceled;
+  const sold = itemStatus === "sold" || itemStatus === "in_transaction" || (!!purchase && !isCanceled);
   const canPurchase = !!user && !sold && !isSeller;
 
   const purchaseMutation = useMutation({
@@ -136,7 +137,7 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged }:
   const canCancel = purchase?.status === "pending_shipment" && isBuyer;
 
   const headline = useMemo(() => {
-    if (!user) return "購入手続き";
+    if (!user) return sold ? "販売済み" : "購入手続き";
     if (isSeller) return sold ? "購入者との取引" : "購入待ち";
     if (sold && !isBuyer) return "販売済み";
     return "購入手続き";
@@ -163,6 +164,12 @@ export function PurchasePanel({ itemId, price, sellerUid, purchase, onChanged }:
             </button>
           )}
           {purchase && <StatusBadge status={purchase.status} />}
+          {!purchase && sold && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-current" />
+              売り切れ
+            </span>
+          )}
         </div>
       </div>
 

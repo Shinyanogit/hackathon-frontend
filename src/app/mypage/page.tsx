@@ -12,12 +12,14 @@ import { ItemCard } from "@/components/item/ItemCard";
 import { storage } from "@/lib/firebase";
 import { Header } from "@/components/layout/Header";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { categories } from "@/constants/categories";
+import type { PurchaseStatus, PurchaseWithItem } from "@/types/purchase";
 
 export default function MyPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"items" | "purchases" | "history" | "likes" | "settings">("items");
+  const [tab, setTab] = useState<"items" | "inprogress" | "completed" | "settings">("items");
   const displayName = user?.displayName ?? "ゲストユーザー";
   const email = user?.email ?? "";
 
@@ -36,7 +38,6 @@ export default function MyPage() {
     queryFn: fetchMySales,
     enabled: !!user,
   });
-  const [purchaseFilter, setPurchaseFilter] = useState<"active" | "completed">("active");
   const myItems = data?.items ?? [];
   const [displayNameInput, setDisplayNameInput] = useState(displayName);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
@@ -50,6 +51,19 @@ export default function MyPage() {
   const [editImageUrl, setEditImageUrl] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editMessage, setEditMessage] = useState<string | null>(null);
+
+  const activePurchases =
+    myPurchases?.filter(
+      (row) => row.purchase.status === "pending_shipment" || row.purchase.status === "shipped"
+    ) ?? [];
+  const activeSales =
+    mySales?.filter(
+      (row) => row.purchase.status === "pending_shipment" || row.purchase.status === "shipped"
+    ) ?? [];
+  const completedPurchases =
+    myPurchases?.filter((row) => row.purchase.status === "delivered") ?? [];
+  const completedSales =
+    mySales?.filter((row) => row.purchase.status === "delivered") ?? [];
 
   useEffect(() => {
     if (!loading && !user) {
@@ -271,9 +285,9 @@ export default function MyPage() {
           <div className="flex flex-wrap gap-2">
             {[
               { key: "items", label: "自分の出品" },
-              { key: "purchases", label: "取引・購入" },
-              { key: "history", label: "閲覧履歴" },
-              { key: "likes", label: "いいねした商品" },
+              { key: "inprogress", label: "取引中（購入/売却）" },
+              { key: "completed", label: "購入済み" },
+              { key: "settings", label: "設定" },
             ].map((t) => (
               <button
                 key={t.key}
@@ -507,128 +521,82 @@ export default function MyPage() {
             </section>
           )}
 
-          {tab === "history" && (
-            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+          {tab === "inprogress" && (
+            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                    History
+                    In Transaction
                   </p>
-                  <h2 className="text-lg font-semibold text-slate-900">閲覧履歴</h2>
-                </div>
-                <Link
-                  href="/items"
-                  className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
-                >
-                  新着を見る
-                </Link>
-              </div>
-              <p className="mt-2 text-sm text-slate-600">
-                閲覧した商品がここに表示されます。履歴連携は今後追加予定です。
-              </p>
-            </section>
-          )}
-
-          {tab === "likes" && (
-            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                    Likes
-                  </p>
-                  <h2 className="text-lg font-semibold text-slate-900">いいねした商品</h2>
-                </div>
-                <Link
-                  href="/items"
-                  className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
-                >
-                  商品一覧へ
-                </Link>
-              </div>
-              <p className="mt-2 text-sm text-slate-600">いいね一覧は今後追加予定です。</p>
-            </section>
-          )}
-
-          {tab === "purchases" && (
-            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                    Purchases
-                  </p>
-                  <h2 className="text-lg font-semibold text-slate-900">取引中 / 購入済み</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">取引中（購入中・売却中）</h2>
                 </div>
               </div>
-              <p className="mt-2 text-sm text-slate-600">
-                自分が購入した商品のステータスです（発送待ち / 発送済み / 受取完了 / キャンセル）。
-              </p>
-              <div className="mt-3 flex gap-2">
-                {[
-                  { key: "active", label: "取引中（発送待ち/発送済み）" },
-                  { key: "completed", label: "購入済み（受取完了）" },
-                ].map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => setPurchaseFilter(f.key as typeof purchaseFilter)}
-                    className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                      purchaseFilter === f.key
-                        ? "bg-emerald-600 text-white shadow-sm"
-                        : "bg-white text-slate-700 border border-slate-200 hover:border-emerald-200 hover:text-emerald-700"
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-              {!myPurchases && <p className="mt-4 text-sm text-slate-500">読み込み中...</p>}
-              {myPurchases && myPurchases.length === 0 && (
-                <p className="mt-4 text-sm text-slate-500">購入履歴がまだありません。</p>
-              )}
-              <div className="mt-4 grid gap-4">
-                {myPurchases
-                  ?.filter((row) =>
-                    purchaseFilter === "active"
-                      ? row.purchase.status === "pending_shipment" || row.purchase.status === "shipped"
-                      : row.purchase.status === "delivered"
-                  )
-                  .map((row) => (
-                  <div
-                    key={row.purchase.id}
-                    className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={
-                            row.item.imageUrl && row.item.imageUrl.trim() !== ""
-                              ? row.item.imageUrl
-                              : "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=400&q=80"
-                          }
-                          alt={row.item.title}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900 line-clamp-2">
-                          {row.item.title || `商品 #${row.purchase.itemId}`}
-                        </p>
-                        <p className="text-xs text-slate-500">¥{row.item.price?.toLocaleString?.() ?? "-"}</p>
-                        <p className="text-xs text-slate-500">
-                          ステータス: {row.purchase.status}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link
-                        href={`/items/${row.purchase.itemId}`}
-                        className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
-                      >
-                        商品ページ
-                      </Link>
-                    </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">購入中</p>
+                  <p className="text-xs text-slate-600">発送待ち / 発送済みの購入です。</p>
+                  {!myPurchases && <p className="mt-3 text-sm text-slate-500">読み込み中...</p>}
+                  {myPurchases && activePurchases.length === 0 && (
+                    <p className="mt-3 text-sm text-slate-500">取引中の購入はありません。</p>
+                  )}
+                  <div className="mt-3 space-y-3">
+                    {activePurchases.map((row) => (
+                      <PurchaseRow key={row.purchase.id} row={row} />
+                    ))}
                   </div>
-                ))}
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">売却中</p>
+                  <p className="text-xs text-slate-600">発送待ち / 発送済みの出品です。</p>
+                  {!mySales && <p className="mt-3 text-sm text-slate-500">読み込み中...</p>}
+                  {mySales && activeSales.length === 0 && (
+                    <p className="mt-3 text-sm text-slate-500">取引中の売却はありません。</p>
+                  )}
+                  <div className="mt-3 space-y-3">
+                    {activeSales.map((row) => (
+                      <PurchaseRow key={row.purchase.id} row={row} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {tab === "completed" && (
+            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                    Completed
+                  </p>
+                  <h2 className="text-lg font-semibold text-slate-900">購入済み / 売却済み</h2>
+                </div>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">購入済み</p>
+                  <p className="text-xs text-slate-600">受取完了した購入です。</p>
+                  {completedPurchases.length === 0 && (
+                    <p className="mt-3 text-sm text-slate-500">まだ購入済みの商品はありません。</p>
+                  )}
+                  <div className="mt-3 space-y-3">
+                    {completedPurchases.map((row) => (
+                      <PurchaseRow key={row.purchase.id} row={row} />
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">売却済み</p>
+                  <p className="text-xs text-slate-600">受取完了した出品です。</p>
+                  {completedSales.length === 0 && (
+                    <p className="mt-3 text-sm text-slate-500">まだ売却済みの商品はありません。</p>
+                  )}
+                  <div className="mt-3 space-y-3">
+                    {completedSales.map((row) => (
+                      <PurchaseRow key={row.purchase.id} row={row} />
+                    ))}
+                  </div>
+                </div>
               </div>
             </section>
           )}
@@ -637,4 +605,69 @@ export default function MyPage() {
     </>
   );
 }
-import { categories } from "@/constants/categories";
+
+const purchaseStatusMeta: Record<
+  PurchaseStatus,
+  { label: string; color: string; bg: string }
+> = {
+  pending_shipment: {
+    label: "発送待ち",
+    color: "text-amber-700",
+    bg: "bg-amber-50",
+  },
+  shipped: {
+    label: "発送済み",
+    color: "text-blue-700",
+    bg: "bg-blue-50",
+  },
+  delivered: {
+    label: "受取済み",
+    color: "text-emerald-700",
+    bg: "bg-emerald-50",
+  },
+  canceled: {
+    label: "キャンセル",
+    color: "text-slate-700",
+    bg: "bg-slate-100",
+  },
+};
+
+function PurchaseRow({ row }: { row: PurchaseWithItem }) {
+  const meta =
+    purchaseStatusMeta[row.purchase.status] ??
+    ({ label: row.purchase.status, color: "text-slate-700", bg: "bg-slate-100" } as const);
+  const image =
+    row.item.imageUrl && row.item.imageUrl.trim() !== ""
+      ? row.item.imageUrl
+      : "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=400&q=80";
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+      <div className="flex items-center gap-3">
+        <div className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={image} alt={row.item.title} className="h-full w-full object-cover" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-slate-900 line-clamp-2">
+            {row.item.title || `商品 #${row.purchase.itemId}`}
+          </p>
+          <p className="text-xs text-slate-500">¥{row.item.price?.toLocaleString?.() ?? "-"}</p>
+          <span
+            className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${meta.bg} ${meta.color}`}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            {meta.label}
+          </span>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href={`/items/${row.purchase.itemId}`}
+          className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
+        >
+          商品ページ
+        </Link>
+      </div>
+    </div>
+  );
+}

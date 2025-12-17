@@ -47,6 +47,7 @@ export default function ItemDetailPage() {
     enabled: !!id && !!user,
   });
   const activePurchase = purchase?.status === "canceled" ? null : purchase;
+  const isSold = data?.status === "sold" || data?.status === "in_transaction";
 
   const fallbackImage =
     "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=900&q=80";
@@ -73,7 +74,9 @@ export default function ItemDetailPage() {
     window.location.href = params.toString() ? `/items?${params.toString()}` : "/items";
   };
 
-  const isOwner = user?.uid && data?.sellerUid === user.uid;
+  const isOwner = !!(user?.uid && data?.sellerUid === user.uid);
+  const isBuyer = !!(activePurchase && user?.uid && activePurchase.buyerUid === user.uid);
+  const soldViewOnly = isSold && !isOwner && !isBuyer;
 
   useEffect(() => {
     if (!data) return;
@@ -164,6 +167,13 @@ export default function ItemDetailPage() {
               className="h-full w-full object-cover"
               loading="lazy"
             />
+            {soldViewOnly && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <span className="rounded-full border border-white/70 bg-white/80 px-6 py-3 text-3xl font-extrabold uppercase tracking-[0.4em] text-slate-900 shadow-lg">
+                  SOLD
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex flex-col gap-4">
             <div className="space-y-2">
@@ -216,7 +226,7 @@ export default function ItemDetailPage() {
                 </a>
               </div>
             )}
-            {!isOwner && (
+            {!isOwner && !soldViewOnly && (
               <GeminiAsk
                 itemId={Number(data.id)}
                 item={{
@@ -232,6 +242,7 @@ export default function ItemDetailPage() {
               price={data.price}
               sellerUid={data.sellerUid}
               purchase={activePurchase ?? null}
+              itemStatus={data.status as any}
               onChanged={() => {
                 refetchPurchase();
               }}
@@ -326,13 +337,19 @@ export default function ItemDetailPage() {
           </div>
         </div>
         <div id="dm">
-          <ChatBox
-            itemId={Number(data.id)}
-            sellerUid={data.sellerUid}
-            currentUid={user?.uid}
-            initialConversationId={initialConversationId}
-            purchaseConversationId={activePurchase?.conversationId ?? null}
-          />
+          {soldViewOnly ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-sm font-semibold text-slate-600">
+              この商品は売り切れのため質問やDMは利用できません。
+            </div>
+          ) : (
+            <ChatBox
+              itemId={Number(data.id)}
+              sellerUid={data.sellerUid}
+              currentUid={user?.uid}
+              initialConversationId={initialConversationId}
+              purchaseConversationId={activePurchase?.conversationId ?? null}
+            />
+          )}
         </div>
       </div>
     </div>
