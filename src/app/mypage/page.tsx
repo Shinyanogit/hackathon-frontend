@@ -197,7 +197,7 @@ export default function MyPage() {
               <div className="rounded-xl border border-white/50 bg-white/80 p-4 shadow-sm">
                 <p className="text-sm font-semibold text-slate-800">売上残高</p>
                 <p className="text-2xl font-bold text-emerald-700">
-                  ¥{((revenueData?.revenueCents ?? 0) / 100).toLocaleString()}
+                  ¥{(revenueData?.revenueYen ?? 0).toLocaleString()}
                 </p>
                 <div className="mt-3 flex gap-2">
                   <input
@@ -215,8 +215,8 @@ export default function MyPage() {
                         return;
                       }
                       try {
-                        await withdrawRevenue(Math.round(Number(withdrawAmount) * 100));
-                        setWithdrawMsg("売上を減算しました");
+                        await withdrawRevenue(Math.round(Number(withdrawAmount)));
+                        setWithdrawMsg("売上を出金しました");
                         setWithdrawAmount("");
                         refetchRevenue();
                       } catch (e: unknown) {
@@ -233,13 +233,15 @@ export default function MyPage() {
               </div>
               <div className="rounded-xl border border-white/50 bg-white/80 p-4 shadow-sm">
                 <p className="text-sm font-semibold text-slate-800">ツリーポイント</p>
-                <p className="text-lg font-bold text-emerald-700">
-                  累計 {treeData?.total != null ? Math.round(treeData.total) : 0} / 残高{" "}
-                  {treeData?.balance != null ? Math.round(treeData.balance) : 0} pt
-                  <span className="ml-2 align-middle">
+                <div className="flex items-center gap-2 text-lg font-bold text-emerald-700">
+                  <span>
+                    累計 {treeData?.total != null ? Math.round(treeData.total) : 0} / 残高{" "}
+                    {treeData?.balance != null ? Math.round(treeData.balance) : 0} pt
+                  </span>
+                  <span className="align-middle">
                     <InfoTooltip />
                   </span>
-                </p>
+                </div>
                 <p className="mt-2 text-xs text-slate-600">
                   取引完了ごとにCO2換算の木年数ポイントが付与されます。ポイントは購入画面で利用できます。
                 </p>

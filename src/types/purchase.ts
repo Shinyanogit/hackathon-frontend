@@ -9,6 +9,8 @@ export type Purchase = {
   status: PurchaseStatus;
   shippingQrUrl: string;
   shippingNote: string;
+  pointsUsed?: number;
+  paidYen?: number;
   shippedAt?: string | null;
   deliveredAt?: string | null;
   createdAt: string;

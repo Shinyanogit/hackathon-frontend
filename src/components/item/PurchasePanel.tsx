@@ -84,6 +84,17 @@ export function PurchasePanel({
   const [toast, setToast] = useState<string | null>(null);
   const prevStatus = useRef<PurchaseStatus | null>(purchase?.status ?? null);
 
+  const parsedPoints = useMemo(() => {
+    const num = Number(pointsInput);
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(0, Math.min(price, Math.floor(num)));
+  }, [pointsInput, price]);
+  const payable = Math.max(0, price - parsedPoints);
+  const pointsUsed = purchase?.pointsUsed ?? parsedPoints;
+  const paidYen = purchase
+    ? Math.max(0, purchase.paidYen ?? price - (purchase.pointsUsed ?? 0))
+    : payable;
+
   const isCanceled = purchase?.status === "canceled";
   const isSeller = !!user && sellerUid === user.uid;
   const isBuyer = !!user && purchase?.buyerUid === user.uid;
@@ -92,10 +103,7 @@ export function PurchasePanel({
 
   const purchaseMutation = useMutation({
     mutationFn: () =>
-      purchaseItem(
-        itemId,
-        pointsInput !== "" ? Number(Math.max(0, Math.min(price, Math.floor(Number(pointsInput))))) : undefined
-      ),
+      purchaseItem(itemId, pointsInput !== "" ? parsedPoints : undefined),
     onSuccess: () => {
       setError(null);
       const tYears = treeYears ?? null;
@@ -146,7 +154,7 @@ export function PurchasePanel({
           ? `購入完了！約 ${treesText} の木相当の資源を節約できました！ ${pts}`
           : `購入完了！資源を節約できました！ ${pts}`
       );
-      setCelebrate(treesText ? `資源を節約しました！ ${pts}` : pts || null);
+      setCelebrate(null);
     }
     prevStatus.current = current;
   }, [purchase?.status, treePoints, treeYears]);
@@ -227,6 +235,12 @@ export function PurchasePanel({
                 <InfoTooltip treeYearsText={treeYears != null ? treeYears.toFixed(1) : undefined} />
               </div>
             )}
+            {purchase && isBuyer && (
+              <div className="text-[11px] font-semibold text-slate-700">
+                支払額 ¥{paidYen.toLocaleString()}
+                {pointsUsed > 0 && <>（ポイント使用 {pointsUsed.toLocaleString()} pt）</>}
+              </div>
+            )}
           </div>
           {canPurchase && (
             <div className="flex flex-col items-end gap-1">
@@ -251,6 +265,11 @@ export function PurchasePanel({
                 />
                 <span className="text-[11px] text-slate-500">ポイント利用（任意）</span>
               </div>
+              {parsedPoints > 0 && (
+                <div className="text-right text-[11px] font-semibold text-emerald-700">
+                  ポイント使用: {parsedPoints} pt → 支払額 ¥{payable.toLocaleString()}
+                </div>
+              )}
               <button
                 className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
                 onClick={() => purchaseMutation.mutate()}
@@ -260,7 +279,6 @@ export function PurchasePanel({
               </button>
             </div>
           )}
-          {purchase && <StatusBadge status={purchase.status} />}
           {!purchase && sold && (
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
               <span className="h-1.5 w-1.5 rounded-full bg-current" />
@@ -304,7 +322,6 @@ export function PurchasePanel({
                 <p className="text-xs text-slate-600">{statusMeta[purchase.status].description}</p>
               </div>
             </div>
-
             {purchase.status === "pending_shipment" && (
               <>
                 {isSeller ? (
@@ -353,28 +370,15 @@ export function PurchasePanel({
             )}
 
             {purchase.status === "shipped" && (
-              <div className="rounded-lg border border-blue-100 bg-white px-4 py-3 text-xs text-slate-700">
-                <p className="font-semibold text-slate-900">発送が完了しました</p>
-                <p className="mt-1 text-slate-600">
-                  到着したら「受け取りを報告」を押してください。
-                </p>
-                {canConfirmReceive && (
-                  <button
-                    className="mt-3 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
-                    onClick={() => deliveredMutation.mutate(purchase.id)}
-                    disabled={deliveredMutation.isPending}
-                  >
-                    {deliveredMutation.isPending ? "送信中..." : "受け取りを報告"}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {purchase.status === "delivered" && (
-              <div className="rounded-lg border border-emerald-100 bg-white px-4 py-3 text-xs text-slate-700">
-                <p className="font-semibold text-slate-900">受取済み</p>
-                <p className="mt-1 text-slate-600">取引が完了しました。</p>
-              </div>
+              canConfirmReceive && (
+                <button
+                  className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                  onClick={() => deliveredMutation.mutate(purchase.id)}
+                  disabled={deliveredMutation.isPending}
+                >
+                  {deliveredMutation.isPending ? "送信中..." : "受け取りを報告"}
+                </button>
+              )
             )}
 
             {purchase.status === "canceled" && (

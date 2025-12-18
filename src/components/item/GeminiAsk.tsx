@@ -51,7 +51,7 @@ export function GeminiAsk({ itemId, item }: Props) {
         )}
       </div>
       <p className="mt-2 text-xs text-slate-600">
-        商品データを元に Gemini が回答します。発送・決済などの個別条件はDMで確認してください。
+        商品データを元に AIが回答
       </p>
       <div className="mt-3 space-y-2">
         <textarea
