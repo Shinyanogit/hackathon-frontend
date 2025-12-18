@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Header } from "@/components/layout/Header";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { fetchItems } from "@/lib/api/items";
 import { fetchPublicUser } from "@/lib/api/users";
 import { ItemCard } from "@/components/item/ItemCard";
@@ -29,18 +29,12 @@ export default function SellerPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header
+      <AppHeader
         onSearch={(val) => {
           const params = new URLSearchParams();
           if (val) params.set("query", val);
           window.location.href = params.toString() ? `/items?${params.toString()}` : "/items";
         }}
-        locale="ja"
-        onLocaleChange={() => {}}
-        brandName="Fleamint"
-        brandTagline="プレラブドマーケット"
-        signupLabel="新規登録"
-        searchPlaceholder="キーワードで探す"
       />
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
         <Link

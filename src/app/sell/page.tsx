@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { createItem, estimateItemCO2, estimateItemCO2Preview } from "@/lib/api/items";
@@ -9,6 +10,7 @@ import { categories } from "@/constants/categories";
 import { auth, storage } from "@/lib/firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { AppHeader } from "@/components/layout/AppHeader";
 
 export default function SellPage() {
   const router = useRouter();
@@ -188,12 +190,22 @@ export default function SellPage() {
   });
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 px-4 py-10 sm:px-6">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">出品を始める</h1>
-          <p className="text-sm text-slate-500">必要な情報を入力して商品を公開しましょう。</p>
-        </div>
+    <>
+      <AppHeader hideSearch />
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 px-4 pb-24 pt-10 sm:px-6">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">出品を始める</h1>
+              <p className="text-sm text-slate-500">必要な情報を入力して商品を公開しましょう。</p>
+            </div>
+            <Link
+              href="/"
+              className="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
+            >
+              トップに戻る
+            </Link>
+          </div>
 
         <form
           onSubmit={handleSubmit}
@@ -287,82 +299,69 @@ export default function SellPage() {
             >
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
                 <input id="image-file" type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                <span>画像ファイルを選択</span>
+                <span>画像ファイルを選択(上限5MB)</span>
               </label>
               <div className="text-xs text-slate-500">またはここにドラッグ＆ドロップ</div>
               {imageFileName && <span className="text-xs text-slate-500">選択中: {imageFileName}</span>}
             </div>
-            <p className="text-xs text-slate-500">
-              5MB以下の画像ファイルに対応。選択しない場合はサンプル画像が自動で設定されます。
-            </p>
-            <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-slate-800">Listing Photo Enhancer</p>
-                  <p className="text-xs text-slate-500">
-                    AIで背景・光を補正しました（商品自体は変更しません）
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => enhanceMutation.mutate()}
-                    disabled={enhanceMutation.isPending || mutation.isPending}
-                    className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
-                  >
-                    {enhanceMutation.isPending ? "AIで補正中..." : "AIで背景をきれいにする"}
-                  </button>
-                </div>
-              </div>
-
-              {aiResult && (
-                <div className="flex flex-wrap gap-2 text-xs text-slate-700">
-                  <label className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1">
-                    <input
-                      type="radio"
-                      name="preview-version"
-                      value="ai"
-                      checked={selectedVersion === "ai"}
-                      onChange={() => setSelectedVersion("ai")}
-                    />
-                    AI版を使う
-                  </label>
-                  <label className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1">
-                    <input
-                      type="radio"
-                      name="preview-version"
-                      value="original"
-                      checked={selectedVersion === "original"}
-                      onChange={() => setSelectedVersion("original")}
-                    />
-                    元画像を使う
-                  </label>
-                  <span className="rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700">
-                    {aiResult.meta.mode} / background {aiResult.meta.background}
-                  </span>
-                </div>
-              )}
-
-              {(imagePreview || aiResult) && (
-                <div
-                  className="overflow-hidden rounded-xl border border-slate-200 bg-white cursor-zoom-in"
-                  onClick={() => setImageModalOpen(true)}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={
-                      aiResult
-                        ? selectedVersion === "ai"
-                          ? aiResult.enhancedUrl
-                          : aiResult.originalUrl
-                        : (imagePreview as string)
-                    }
-                    alt="Preview"
-                    className="h-48 w-full object-cover"
-                  />
-                </div>
-              )}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={() => enhanceMutation.mutate()}
+                disabled={enhanceMutation.isPending || mutation.isPending}
+                className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              >
+                {enhanceMutation.isPending ? "AIで補正中..." : "AIで背景をきれいにする"}
+              </button>
             </div>
+
+            {aiResult && (
+              <div className="flex flex-wrap gap-2 text-xs text-slate-700">
+                <label className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1">
+                  <input
+                    type="radio"
+                    name="preview-version"
+                    value="ai"
+                    checked={selectedVersion === "ai"}
+                    onChange={() => setSelectedVersion("ai")}
+                  />
+                  AI版を使う
+                </label>
+                <label className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1">
+                  <input
+                    type="radio"
+                    name="preview-version"
+                    value="original"
+                    checked={selectedVersion === "original"}
+                    onChange={() => setSelectedVersion("original")}
+                  />
+                  元画像を使う
+                </label>
+                <span className="rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700">
+                  {aiResult.meta.mode} / background {aiResult.meta.background}
+                </span>
+              </div>
+            )}
+
+            {(imagePreview || aiResult) && (
+              <div
+                className="overflow-hidden rounded-xl border border-slate-200 bg-white cursor-zoom-in"
+                onClick={() => setImageModalOpen(true)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={
+                    aiResult
+                      ? selectedVersion === "ai"
+                        ? aiResult.enhancedUrl
+                        : aiResult.originalUrl
+                      : (imagePreview as string)
+                  }
+                  alt="Preview"
+                  className="h-48 w-full object-cover"
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/80 p-3">
@@ -370,9 +369,10 @@ export default function SellPage() {
               <div>
                 <p className="text-sm font-semibold text-emerald-900">推定CO2削減量</p>
                 {previewCo2 == null ? (
-                  <p className="text-xs text-emerald-700">
-                    AI算出した推定値でポイントを獲得できます。
-                  </p>
+                  <div className="flex items-center gap-2 text-xs text-emerald-700">
+                    <span>AI算出した推定値でtreeポイントを獲得できます。</span>
+                    <InfoTooltip />
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
                     <span>推定: {previewCo2.toFixed(1)} kgCO2e → {previewPoints}pt獲得</span>
@@ -406,34 +406,32 @@ export default function SellPage() {
           </button>
         </form>
 
-        <div className="text-xs text-slate-500">
-          このフォームから送信すると、API `/items` に対して出品データが登録されます。
         </div>
-      </div>
-      {imageModalOpen && (imagePreview || aiResult) && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          onClick={() => setImageModalOpen(false)}
-        >
+        {imageModalOpen && (imagePreview || aiResult) && (
           <div
-            className="max-h-[90vh] max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            onClick={() => setImageModalOpen(false)}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={
-                aiResult
-                  ? selectedVersion === "ai"
-                    ? aiResult.enhancedUrl
-                    : aiResult.originalUrl
-                  : (imagePreview as string)
-              }
-              alt="preview-large"
-              className="max-h-[90vh] w-auto max-w-full object-contain"
-            />
+            <div
+              className="max-h-[90vh] max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={
+                  aiResult
+                    ? selectedVersion === "ai"
+                      ? aiResult.enhancedUrl
+                      : aiResult.originalUrl
+                    : (imagePreview as string)
+                }
+                alt="preview-large"
+                className="max-h-[90vh] w-auto max-w-full object-contain"
+              />
+            </div>
           </div>
-        </div>
-      )}
-    </main>
+        )}
+      </main>
+    </>
   );
 }

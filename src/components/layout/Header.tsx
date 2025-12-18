@@ -24,6 +24,7 @@ type Props = {
   selectedFilter?: string;
   onFilterChange?: (value: string) => void;
   hideSearch?: boolean;
+  initialQuery?: string;
 };
 
 export function Header({
@@ -38,6 +39,7 @@ export function Header({
   selectedFilter,
   onFilterChange,
   hideSearch = false,
+  initialQuery,
 }: Props) {
   void _locale;
   void _onLocaleChange;
@@ -120,6 +122,7 @@ export function Header({
           <SearchBar
             compact
             onSubmit={onSearch}
+            initialValue={initialQuery}
             filterOptions={filterOptions}
             selectedFilter={selectedFilter}
             onFilterChange={onFilterChange}
@@ -233,6 +236,7 @@ export function Header({
           <SearchBar
             compact
             onSubmit={onSearch}
+            initialValue={initialQuery}
             filterOptions={filterOptions}
             selectedFilter={selectedFilter}
             onFilterChange={onFilterChange}

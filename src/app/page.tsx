@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CategoryTabs } from "@/components/home/CategoryTabs";
 import { HeroSection } from "@/components/home/HeroSection";
-import { Footer } from "@/components/layout/Footer";
-import { Header } from "@/components/layout/Header";
+import { MobileFooterNav } from "@/components/layout/MobileFooterNav";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { ItemCard } from "@/components/item/ItemCard";
 import { categories } from "@/constants/categories";
 import { fetchItems } from "@/lib/api/items";
@@ -55,7 +55,7 @@ const copy: Record<
 > = {
   ja: {
     brandName: "Fleamint",
-    brandTagline: "プレラブドマーケット",
+    brandTagline: "シンプルフリマ",
     navLinks: [
       { href: "/explore", label: "見つける", icon: "compass" },
       { href: "/men", label: "メンズ", icon: "jacket" },
@@ -66,13 +66,13 @@ const copy: Record<
     searchPlaceholder: "アイテム名、ブランド、サイズで検索",
     hero: {
       badge: "次世代フリマ",
-      title: "綺麗になる部屋、\n綺麗になる地球。",
+      title: "ぱっと出品、\nきれいなお部屋。",
       description:
-        "部屋の邪魔者をスムーズ出品。\n資源を有効活用。",
+        "背景を気にせず撮るだけ。\nAIが瞬時に白く整えます。",
       primaryCta: "出品を始める",
       secondaryCta: "商品を探す",
       searchPlaceholder: "\"デニムジャケット\" \"ナイキ スニーカー\" などで検索",
-      chips: ["購入者保護付き", "すぐに売れる設計"],
+      chips: ["リユースで地球に優しく", "すぐに売れる設計"],
     },
     categoryHeading: "カテゴリから探す",
     categorySubheading: "スタイルに合わせてブラウズ",
@@ -82,49 +82,7 @@ const copy: Record<
     error: "商品を取得できませんでした。API接続を確認してください。",
     empty: "該当する商品がありません。別のキーワードで試してください。",
     statsLabel: (count) => `${count} 点`,
-    footer: {
-      description: "洗練されたマーケット体験を提供します。",
-      appTitle: "",
-      appIos: "",
-      appAndroid: "",
-      columns: [
-        {
-          title: "マーケットプレイス",
-          links: [
-            { label: "新着一覧", href: "/items" },
-            { label: "出品する", href: "/sell" },
-            { label: "カテゴリ", href: "/explore" },
-            { label: "サイズガイド", href: "/" },
-            { label: "ギフトカード", href: "/" },
-          ],
-        },
-        {
-          title: "ヘルプ",
-          links: [
-            { label: "サポート", href: "/" },
-            { label: "安全のために", href: "/" },
-            { label: "発送について", href: "/" },
-            { label: "返品・返金", href: "/" },
-            { label: "お問い合わせ", href: "/" },
-          ],
-        },
-        {
-          title: "会社情報",
-          links: [
-            { label: "Fleamint とは", href: "/" },
-            { label: "採用情報", href: "/" },
-            { label: "プレス", href: "/" },
-            { label: "サステナビリティ", href: "/" },
-            { label: "利用規約", href: "/" },
-          ],
-        },
-      ],
-      legal: [
-        { label: "プライバシー", href: "/" },
-        { label: "利用規約", href: "/" },
-        { label: "クッキー", href: "/" },
-      ],
-    },
+    footer: { description: "", appTitle: "", appIos: "", appAndroid: "", columns: [], legal: [] },
   },
   en: {
     brandName: "Fleamint",
@@ -155,49 +113,7 @@ const copy: Record<
     error: "Failed to load items. Check the API connection.",
     empty: "No items match your filters yet. Try a different search.",
     statsLabel: (count) => `${count} items`,
-    footer: {
-      description: "A modern resale experience built with Next.js and Tailwind.",
-      appTitle: "",
-      appIos: "",
-      appAndroid: "",
-      columns: [
-        {
-          title: "Marketplace",
-          links: [
-            { label: "Discover", href: "/items" },
-            { label: "Sell an item", href: "/sell" },
-            { label: "Categories", href: "/explore" },
-            { label: "Size guide", href: "/" },
-            { label: "Gift cards", href: "/" },
-          ],
-        },
-        {
-          title: "Help",
-          links: [
-            { label: "Support", href: "/" },
-            { label: "Safety tips", href: "/" },
-            { label: "Shipping", href: "/" },
-            { label: "Returns", href: "/" },
-            { label: "Contact", href: "/" },
-          ],
-        },
-        {
-          title: "Company",
-          links: [
-            { label: "About", href: "/" },
-            { label: "Careers", href: "/" },
-            { label: "Press", href: "/" },
-            { label: "Sustainability", href: "/" },
-            { label: "Terms", href: "/" },
-          ],
-        },
-      ],
-      legal: [
-        { label: "Privacy", href: "/" },
-        { label: "Terms", href: "/" },
-        { label: "Cookies", href: "/" },
-      ],
-    },
+    footer: { description: "", appTitle: "", appIos: "", appAndroid: "", columns: [], legal: [] },
   },
 };
 
@@ -313,6 +229,11 @@ function HomePageContent() {
     localizedCategories.find((c) => c.children?.some((child) => child.slug === activeCategorySlug))?.slug ??
     "";
 
+  useEffect(() => {
+    const q = searchParams.get("query") ?? "";
+    setSearchQuery(q);
+  }, [searchParams]);
+
   const activeChildren =
     localizedCategories.find((c) => c.slug === activeParentSlug)?.children ?? [];
 
@@ -360,14 +281,9 @@ function HomePageContent() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-emerald-50/40">
-      <Header
+      <AppHeader
         onSearch={handleSearch}
-        locale={locale}
-        onLocaleChange={setLocale}
-        brandName={t.brandName}
-        brandTagline={t.brandTagline}
-        signupLabel={t.signupLabel}
-        searchPlaceholder={t.searchPlaceholder}
+        initialQuery={searchQuery}
         filterOptions={localizedCategories
           .filter((c) => c.slug)
           .map((c) => ({ label: c.label, value: c.slug }))}
@@ -468,16 +384,7 @@ function HomePageContent() {
           </div>
         </section>
       </main>
-      <Footer
-        brandName={t.brandName}
-        brandTagline={t.brandTagline}
-        description={t.footer.description}
-        columns={t.footer.columns}
-        legalLinks={t.footer.legal}
-        appTitle={t.footer.appTitle}
-        appIos={t.footer.appIos}
-        appAndroid={t.footer.appAndroid}
-      />
+      <MobileFooterNav />
     </div>
   );
 }

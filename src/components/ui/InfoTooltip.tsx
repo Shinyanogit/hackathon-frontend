@@ -14,7 +14,7 @@ const defaultLabel =
 export function InfoTooltip({ className, treeYearsText, pointsText }: InfoTooltipProps) {
   const label =
     treeYearsText || pointsText
-      ? `このリユースで木が約 ${treeYearsText ?? "-"} 年で吸収するCO2相当を節約し、取引完了時${pointsText ?? ""} pt が付与されます。`
+      ? `このリユースで木が約 ${treeYearsText ?? "-"} 年で吸収するCO2相当を節約するため、取引完了時${pointsText ?? ""} pt が付与されます。`
       : defaultLabel;
   return (
     <div className={`relative inline-block ${className ?? ""}`}>

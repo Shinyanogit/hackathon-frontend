@@ -6,7 +6,7 @@ import { notFound, useParams, useSearchParams } from "next/navigation";
 import { ChatBox } from "@/components/item/ChatBox";
 import { GeminiAsk } from "@/components/item/GeminiAsk";
 import { PurchasePanel } from "@/components/item/PurchasePanel";
-import { Header } from "@/components/layout/Header";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { useAuth } from "@/context/AuthContext";
 import { categories } from "@/constants/categories";
 import { estimateItemCO2, fetchItem, updateItem } from "@/lib/api/items";
@@ -19,6 +19,7 @@ import { ApiError } from "@/lib/apiClient";
 import { enhanceImage } from "@/lib/api/ai";
 import { useEffect, useState } from "react";
 import type React from "react";
+import { MobileFooterNav } from "@/components/layout/MobileFooterNav";
 
 export default function ItemDetailPage() {
   const queryClient = useQueryClient();
@@ -182,15 +183,7 @@ export default function ItemDetailPage() {
   if (isLoading || isError || !data) {
     return (
       <>
-        <Header
-          onSearch={handleSearch}
-          locale="ja"
-          onLocaleChange={() => {}}
-          brandName="Fleamint"
-          brandTagline="プレラブドマーケット"
-          signupLabel="新規登録"
-          searchPlaceholder="キーワードで探す"
-        />
+        <AppHeader onSearch={handleSearch} />
         <div className="mx-auto max-w-3xl px-4 py-12">
           {isError ? (
             notFound()
@@ -204,16 +197,8 @@ export default function ItemDetailPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header
-        onSearch={handleSearch}
-        locale="ja"
-        onLocaleChange={() => {}}
-        brandName="Fleamint"
-        brandTagline="プレラブドマーケット"
-        signupLabel="新規登録"
-        searchPlaceholder="キーワードで探す"
-      />
-      <div className="mx-auto max-w-5xl px-4 py-12">
+      <AppHeader onSearch={handleSearch} />
+      <div className="mx-auto max-w-5xl px-4 pb-20 pt-12">
         <Link
           href="/"
           className="text-sm font-medium text-emerald-700 underline decoration-emerald-200 underline-offset-4 hover:text-emerald-800"
@@ -492,6 +477,7 @@ export default function ItemDetailPage() {
           </div>
         </div>
       )}
+      <MobileFooterNav />
     </div>
   );
 }

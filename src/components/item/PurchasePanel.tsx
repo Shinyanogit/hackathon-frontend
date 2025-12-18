@@ -232,7 +232,10 @@ export function PurchasePanel({
                 <span>
                   木 {treeYears != null ? treeYears.toFixed(1) : "—"} 年 / +{treePoints} pt
                 </span>
-                <InfoTooltip treeYearsText={treeYears != null ? treeYears.toFixed(1) : undefined} />
+                <InfoTooltip
+                  treeYearsText={treeYears != null ? treeYears.toFixed(1) : undefined}
+                  pointsText={treePoints != null ? treePoints.toString() : undefined}
+                />
               </div>
             )}
             {purchase && isBuyer && (

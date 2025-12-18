@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type Props = {
   placeholder?: string;
@@ -10,6 +10,7 @@ type Props = {
   filterOptions?: { label: string; value: string }[];
   selectedFilter?: string;
   onFilterChange?: (value: string) => void;
+  initialValue?: string;
 };
 
 export function SearchBar({
@@ -20,11 +21,16 @@ export function SearchBar({
   filterOptions,
   selectedFilter,
   onFilterChange,
+  initialValue = "",
 }: Props) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initialValue);
   const [open, setOpen] = useState(false);
   const selectedLabel =
     selectedFilter && filterOptions?.find((opt) => opt.value === selectedFilter)?.label;
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

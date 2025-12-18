@@ -13,7 +13,8 @@ import { fetchTreePoints } from "@/lib/api/treePoints";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { ItemCard } from "@/components/item/ItemCard";
 import { storage } from "@/lib/firebase";
-import { Header } from "@/components/layout/Header";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { MobileFooterNav } from "@/components/layout/MobileFooterNav";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { categories } from "@/constants/categories";
 import type { PurchaseStatus, PurchaseWithItem } from "@/types/purchase";
@@ -175,79 +176,17 @@ export default function MyPage() {
 
   return (
     <>
-      <Header
+      <AppHeader
         onSearch={(val) => {
           const params = new URLSearchParams();
           if (val) params.set("query", val);
           router.push(params.toString() ? `/items?${params.toString()}` : "/items");
         }}
-        locale="ja"
-        onLocaleChange={() => {}}
-        brandName="Fleamint"
-        brandTagline="プレラブドマーケット"
-        signupLabel="新規登録"
-        searchPlaceholder=""
         hideSearch
       />
-      <main className="min-h-screen bg-white px-4 py-10">
+      <main className="min-h-screen bg-white px-4 pb-24 pt-10">
         <div className="mx-auto flex max-w-5xl flex-col space-y-8">
-          <section className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-emerald-900">売上とツリーポイント</h2>
-            <div className="mt-3 grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-white/50 bg-white/80 p-4 shadow-sm">
-                <p className="text-sm font-semibold text-slate-800">売上残高</p>
-                <p className="text-2xl font-bold text-emerald-700">
-                  ¥{(revenueData?.revenueYen ?? 0).toLocaleString()}
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value === "" ? "" : Number(e.target.value))}
-                    className="w-32 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
-                    placeholder="出金額"
-                  />
-                  <button
-                    onClick={async () => {
-                      if (withdrawAmount === "" || withdrawAmount <= 0) {
-                        setWithdrawMsg("金額を入力してください");
-                        return;
-                      }
-                      try {
-                        await withdrawRevenue(Math.round(Number(withdrawAmount)));
-                        setWithdrawMsg("売上を出金しました");
-                        setWithdrawAmount("");
-                        refetchRevenue();
-                      } catch (e: unknown) {
-                        const msg = e instanceof Error ? e.message : "出金に失敗しました";
-                        setWithdrawMsg(msg);
-                      }
-                    }}
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-                  >
-                    売上から出金
-                  </button>
-                </div>
-                {withdrawMsg && <p className="mt-2 text-xs text-slate-600">{withdrawMsg}</p>}
-              </div>
-              <div className="rounded-xl border border-white/50 bg-white/80 p-4 shadow-sm">
-                <p className="text-sm font-semibold text-slate-800">ツリーポイント</p>
-                <div className="flex items-center gap-2 text-lg font-bold text-emerald-700">
-                  <span>
-                    累計 {treeData?.total != null ? Math.round(treeData.total) : 0} / 残高{" "}
-                    {treeData?.balance != null ? Math.round(treeData.balance) : 0} pt
-                  </span>
-                  <span className="align-middle">
-                    <InfoTooltip />
-                  </span>
-                </div>
-                <p className="mt-2 text-xs text-slate-600">
-                  取引完了ごとにCO2換算の木年数ポイントが付与されます。ポイントは購入画面で利用できます。
-                </p>
-              </div>
-            </div>
-          </section>
+
           <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
@@ -361,13 +300,67 @@ export default function MyPage() {
               </div>
             )}
           </section>
-
+          <section className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-6 shadow-sm">
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-white/50 bg-white/80 p-4 shadow-sm">
+                <p className="text-sm font-semibold text-slate-800">売上残高</p>
+                <p className="text-2xl font-bold text-emerald-700">
+                  ¥{(revenueData?.revenueYen ?? 0).toLocaleString()}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="w-32 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                    placeholder="出金額"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (withdrawAmount === "" || withdrawAmount <= 0) {
+                        setWithdrawMsg("金額を入力してください");
+                        return;
+                      }
+                      try {
+                        await withdrawRevenue(Math.round(Number(withdrawAmount)));
+                        setWithdrawMsg("売上を出金しました");
+                        setWithdrawAmount("");
+                        refetchRevenue();
+                      } catch (e: unknown) {
+                        const msg = e instanceof Error ? e.message : "出金に失敗しました";
+                        setWithdrawMsg(msg);
+                      }
+                    }}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                  >
+                    売上から出金
+                  </button>
+                </div>
+                {withdrawMsg && <p className="mt-2 text-xs text-slate-600">{withdrawMsg}</p>}
+              </div>
+              <div className="rounded-xl border border-white/50 bg-white/80 p-4 shadow-sm">
+                <p className="text-sm font-semibold text-slate-800">ツリーポイント</p>
+                <div className="flex items-center gap-2 text-lg font-bold text-emerald-700">
+                  <span>
+                    累計 {treeData?.total != null ? Math.round(treeData.total) : 0} / 残高{" "}
+                    {treeData?.balance != null ? Math.round(treeData.balance) : 0} pt
+                  </span>
+                  <span className="align-middle">
+                    <InfoTooltip />
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-slate-600">
+                  取引完了ごとにCO2換算の木年数ポイントが付与されます。ポイントは購入画面で利用できます。
+                </p>
+              </div>
+            </div>
+          </section>
           <div className="flex flex-wrap gap-2">
             {[
               { key: "items", label: "自分の出品" },
               { key: "inprogress", label: "取引中（購入/売却）" },
               { key: "completed", label: "購入済み" },
-              { key: "settings", label: "設定" },
             ].map((t) => (
               <button
                 key={t.key}
@@ -630,6 +623,7 @@ export default function MyPage() {
           )}
         </div>
       </main>
+      <MobileFooterNav />
     </>
   );
 }

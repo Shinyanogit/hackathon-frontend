@@ -5,8 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { Footer } from "@/components/layout/Footer";
-import { Header } from "@/components/layout/Header";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { MobileFooterNav } from "@/components/layout/MobileFooterNav";
 import { ItemCard } from "@/components/item/ItemCard";
 import { categories } from "@/constants/categories";
 import { fetchItems } from "@/lib/api/items";
@@ -41,10 +41,11 @@ function ItemsPageContent() {
       return matchesQuery;
     });
   }, [items, appliedQuery]);
+  const hasFilter = appliedQuery !== "" || appliedFilter !== "";
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-emerald-50/40">
-      <Header
+      <AppHeader
         onSearch={(val) => {
           const params = new URLSearchParams();
           if (val) params.set("query", val);
@@ -52,12 +53,7 @@ function ItemsPageContent() {
           const qs = params.toString();
           router.push(qs ? `/items?${qs}` : "/items");
         }}
-        locale="ja"
-        onLocaleChange={() => {}}
-        brandName="Fleamint"
-        brandTagline="プレラブドマーケット"
-        signupLabel="新規登録"
-        searchPlaceholder="キーワードで探す"
+        initialQuery={appliedQuery}
         filterOptions={categories.filter((c) => c.slug).map((c) => ({ label: c.label, value: c.slug }))}
         selectedFilter={filterDraft}
         onFilterChange={(slug) => {
@@ -65,11 +61,13 @@ function ItemsPageContent() {
         }}
       />
 
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-16 pt-8">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-24 pt-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">検索結果</h1>
-            {(appliedQuery || appliedFilter) && (
+            {hasFilter && (
+              <h1 className="text-2xl font-semibold text-slate-900">検索結果</h1>
+            )}
+            {hasFilter && (
               <p className="text-sm text-slate-500">
                 {appliedQuery && `“${appliedQuery}” `}
                 {appliedFilter && `カテゴリ: ${appliedFilter}`}
@@ -94,16 +92,7 @@ function ItemsPageContent() {
         </div>
       </main>
 
-      <Footer
-        brandName="Fleamint"
-        brandTagline="プレラブドマーケット"
-        description="洗練されたマーケット体験を提供します。"
-        columns={[]}
-        legalLinks={[]}
-        appTitle=""
-        appIos=""
-        appAndroid=""
-      />
+      <MobileFooterNav />
     </div>
   );
 }
