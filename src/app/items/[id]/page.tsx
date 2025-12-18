@@ -391,15 +391,39 @@ export default function ItemDetailPage() {
                       <button
                         type="button"
                         onClick={async () => {
-                          if (!imageFile) {
-                            setAiMessage("先に画像ファイルを選択してください");
+                          const sourceUrl =
+                            imageFile != null
+                              ? null
+                              : imagePreview || (data.imageUrl && data.imageUrl.trim() !== "" ? data.imageUrl : null);
+                          if (!imageFile && !sourceUrl) {
+                            setAiMessage("先に画像を選択するか既存画像を表示してください");
                             return;
                           }
                           try {
                             setAiEnhancing(true);
                             setAiMessage("AIで背景を補正中…");
+                            let fileToSend = imageFile;
+                            if (!fileToSend && sourceUrl) {
+                              const resp = await fetch(sourceUrl, {
+                                mode: "cors",
+                                referrerPolicy: "no-referrer",
+                                cache: "no-store",
+                              });
+                              if (!resp.ok) {
+                                throw new Error(
+                                  `既存画像の取得に失敗しました (status ${resp.status})。一度画像を再選択してからお試しください。`
+                                );
+                              }
+                              const blob = await resp.blob();
+                              fileToSend = new File([blob], "current-image" + (blob.type === "image/png" ? ".png" : ".jpg"), {
+                                type: blob.type || "image/jpeg",
+                              });
+                            }
+                            if (!fileToSend) {
+                              throw new Error("画像を読み込めませんでした");
+                            }
                             const res = await enhanceImage({
-                              image: imageFile,
+                              image: fileToSend,
                               itemId: String(id),
                               category: category || data.categorySlug,
                               mode: "auto",
@@ -409,7 +433,10 @@ export default function ItemDetailPage() {
                             setImageFile(null);
                             setAiMessage("背景を白でクリーンアップしました");
                           } catch (e: unknown) {
-                            const msg = e instanceof Error ? e.message : "AI背景補正に失敗しました";
+                            const msg =
+                              e instanceof Error
+                                ? `AI背景補正に失敗しました: ${e.message}`
+                                : "AI背景補正に失敗しました";
                             setAiMessage(msg);
                           } finally {
                             setAiEnhancing(false);

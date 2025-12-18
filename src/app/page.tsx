@@ -365,22 +365,34 @@ function HomePageContent() {
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-lg">
               💸
             </span>
-            <p className="text-base font-semibold text-slate-900">すぐ売れる</p>
-            <p className="text-sm text-slate-600">シンプルなフォームで数分で出品、プレビューで安心。</p>
+            <p className="text-base font-semibold text-slate-900">すぐ出品</p>
+            <p className="text-sm text-slate-600">
+              シンプルなフォームで数分で出品
+              <br />
+              背景の汚れもAIで瞬時に補正
+            </p>
           </div>
           <div className="space-y-2">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-lg">
               🔒
             </span>
             <p className="text-base font-semibold text-slate-900">安心・透明</p>
-            <p className="text-sm text-slate-600">購入者保護と分かりやすい価格で、安心して取引できます。</p>
+            <p className="text-sm text-slate-600">
+              綺麗&直感的なUI
+              <br />
+              ストレス無くショッピング
+            </p>
           </div>
           <div className="space-y-2">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-lg">
               🌱
             </span>
             <p className="text-base font-semibold text-slate-900">循環を楽しむ</p>
-            <p className="text-sm text-slate-600">明るく軽やかなUIで、セカンドハンドをもっと心地よく。</p>
+            <p className="text-sm text-slate-600">
+              リユース資源量に応じポイント獲得
+              <br />
+              次の買い物が楽しみに
+            </p>
           </div>
         </section>
       </main>
