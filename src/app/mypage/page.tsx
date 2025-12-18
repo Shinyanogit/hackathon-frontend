@@ -10,6 +10,7 @@ import { fetchMyItems, updateItem } from "@/lib/api/items";
 import { fetchMyPurchases, fetchMySales } from "@/lib/api/purchases";
 import { fetchRevenue, withdrawRevenue } from "@/lib/api/revenue";
 import { fetchTreePoints } from "@/lib/api/treePoints";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { ItemCard } from "@/components/item/ItemCard";
 import { storage } from "@/lib/firebase";
 import { Header } from "@/components/layout/Header";
@@ -85,6 +86,13 @@ export default function MyPage() {
       router.replace("/");
     }
   }, [loading, user, router]);
+
+  useEffect(() => {
+    if (user) {
+      setDisplayNameInput(user.displayName ?? "");
+      setIconPreview(user.photoURL ?? null);
+    }
+  }, [user]);
 
   const providerData = useMemo(() => user?.providerData ?? [], [user]);
   const isPasswordUser = useMemo(
@@ -226,7 +234,11 @@ export default function MyPage() {
               <div className="rounded-xl border border-white/50 bg-white/80 p-4 shadow-sm">
                 <p className="text-sm font-semibold text-slate-800">ツリーポイント</p>
                 <p className="text-lg font-bold text-emerald-700">
-                  累計 {treeData?.total?.toFixed(1) ?? "0.0"} / 残高 {treeData?.balance?.toFixed(1) ?? "0.0"} pt
+                  累計 {treeData?.total != null ? Math.round(treeData.total) : 0} / 残高{" "}
+                  {treeData?.balance != null ? Math.round(treeData.balance) : 0} pt
+                  <span className="ml-2 align-middle">
+                    <InfoTooltip />
+                  </span>
                 </p>
                 <p className="mt-2 text-xs text-slate-600">
                   取引完了ごとにCO2換算の木年数ポイントが付与されます。ポイントは購入画面で利用できます。

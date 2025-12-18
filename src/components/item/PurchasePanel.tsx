@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/apiClient";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import {
   cancelPurchase,
   markDelivered,
@@ -90,7 +91,11 @@ export function PurchasePanel({
   const canPurchase = !!user && !sold && !isSeller;
 
   const purchaseMutation = useMutation({
-    mutationFn: () => purchaseItem(itemId, pointsInput ? Number(pointsInput) : undefined),
+    mutationFn: () =>
+      purchaseItem(
+        itemId,
+        pointsInput !== "" ? Number(Math.max(0, Math.min(price, Math.floor(Number(pointsInput))))) : undefined
+      ),
     onSuccess: () => {
       setError(null);
       const tYears = treeYears ?? null;
@@ -106,9 +111,15 @@ export function PurchasePanel({
       queryClient.invalidateQueries({ queryKey: ["conversations", user?.uid] });
     },
     onError: (err: unknown) => {
-      if (err instanceof ApiError && err.status === 409) {
-        setError("この商品はすでに購入済みです。");
-        return;
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          setError("この商品はすでに購入済みです。");
+          return;
+        }
+        if (err.status === 400 && err.message?.includes("insufficient points")) {
+          setError("ポイント残高が不足しています。使用ポイントを減らすか、ポイント付与をお待ちください。");
+          return;
+        }
       }
       const msg = err instanceof Error ? err.message : "購入に失敗しました";
       setError(msg);
@@ -208,23 +219,12 @@ export function PurchasePanel({
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-col">
             <p className="text-2xl font-bold text-slate-900">¥{price.toLocaleString()}</p>
-            {(treeYears != null || treePoints != null) && (
+            {treePoints != null && treePoints > 0 && (
               <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-700">
                 <span>
-                  木 {treeYears != null ? treeYears.toFixed(1) : "—"} 年 / +{treePoints != null ? treePoints.toFixed(1) : "—"} pt
+                  木 {treeYears != null ? treeYears.toFixed(1) : "—"} 年 / +{treePoints} pt
                 </span>
-                <div className="relative group">
-                  <button
-                    type="button"
-                    aria-label="ポイント説明"
-                    className="flex h-5 w-5 items-center justify-center rounded-full border border-emerald-200 bg-white text-[10px] font-bold text-emerald-700 shadow-sm hover:bg-emerald-50"
-                  >
-                    ?
-                  </button>
-                  <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 hidden w-56 -translate-x-1/2 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-[11px] font-medium text-slate-700 shadow-lg group-hover:block">
-                    このリユースで、木が約 {treeYears != null ? treeYears.toFixed(1) : "—"} 年で吸収するCO2相当の資源が節約されます。
-                  </div>
-                </div>
+                <InfoTooltip treeYearsText={treeYears != null ? treeYears.toFixed(1) : undefined} />
               </div>
             )}
           </div>
@@ -234,9 +234,18 @@ export function PurchasePanel({
                 <input
                   type="number"
                   min={0}
-                  step="0.1"
+                  max={price}
+                  step={1}
                   value={pointsInput}
-                  onChange={(e) => setPointsInput(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setPointsInput("");
+                      return;
+                    }
+                    const num = Math.max(0, Math.min(price, Math.floor(Number(val))));
+                    setPointsInput(String(num));
+                  }}
                   placeholder="使うpt"
                   className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-1 focus:ring-emerald-200"
                 />

@@ -8,6 +8,7 @@ import { enhanceImage } from "@/lib/api/ai";
 import { categories } from "@/constants/categories";
 import { auth, storage } from "@/lib/firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 export default function SellPage() {
   const router = useRouter();
@@ -31,11 +32,14 @@ export default function SellPage() {
     enhancedUrl: string;
     meta: { mode: string; strength: number; background: string; elapsedMs: number };
   } | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
   const [previewCo2, setPreviewCo2] = useState<number | null>(null);
   const [estimateNotice, setEstimateNotice] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<"original" | "ai">("original");
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const previewPoints =
+    previewCo2 != null && previewCo2 > 0 ? Math.max(1, Math.round(previewCo2 / 10)) : null;
 
   const estimateMutation = useMutation({
     mutationFn: (itemId: number) => estimateItemCO2(String(itemId)),
@@ -231,9 +235,18 @@ export default function SellPage() {
             <input
               id="price"
               type="number"
-              min={0}
+              min={100}
+              step={1}
               value={price}
-              onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : "")}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "") {
+                  setPrice("");
+                  return;
+                }
+                const num = Math.max(100, Math.floor(Number(val)));
+                setPrice(num);
+              }}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
               placeholder="例）4800"
               required
@@ -331,7 +344,10 @@ export default function SellPage() {
               )}
 
               {(imagePreview || aiResult) && (
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <div
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white cursor-zoom-in"
+                  onClick={() => setImageModalOpen(true)}
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={
@@ -353,9 +369,19 @@ export default function SellPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-emerald-900">推定CO2削減量</p>
-                <p className="text-xs text-emerald-700">
-                  出品前に推定値を確認できます。Geminiで算出し、出品時にも自動で保存されます。
-                </p>
+                {previewCo2 == null ? (
+                  <p className="text-xs text-emerald-700">
+                    AI算出した推定値でポイントを獲得できます。
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                    <span>推定: {previewCo2.toFixed(1)} kgCO2e → {previewPoints}pt獲得</span>
+                    <InfoTooltip
+                      treeYearsText={(previewCo2 / 10).toFixed(1)}
+                      pointsText={previewPoints != null ? previewPoints.toString() : undefined}
+                    />
+                  </div>
+                )}
               </div>
               <button
                 type="button"
@@ -365,9 +391,6 @@ export default function SellPage() {
               >
                 {previewMutation.isPending ? "算出中..." : "CO2を算出する"}
               </button>
-            </div>
-            <div className="text-sm font-semibold text-emerald-900">
-              {previewCo2 != null ? `推定: ${previewCo2.toFixed(1)} kgCO2e` : "未算出"}
             </div>
             {estimateNotice && <p className="text-xs text-emerald-800">{estimateNotice}</p>}
           </div>
@@ -387,6 +410,30 @@ export default function SellPage() {
           このフォームから送信すると、API `/items` に対して出品データが登録されます。
         </div>
       </div>
+      {imageModalOpen && (imagePreview || aiResult) && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setImageModalOpen(false)}
+        >
+          <div
+            className="max-h-[90vh] max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={
+                aiResult
+                  ? selectedVersion === "ai"
+                    ? aiResult.enhancedUrl
+                    : aiResult.originalUrl
+                  : (imagePreview as string)
+              }
+              alt="preview-large"
+              className="max-h-[90vh] w-auto max-w-full object-contain"
+            />
+          </div>
+        </div>
+      )}
     </main>
   );
 }

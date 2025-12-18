@@ -12,6 +12,7 @@ import { categories } from "@/constants/categories";
 import { estimateItemCO2, fetchItem, updateItem } from "@/lib/api/items";
 import { fetchPurchase } from "@/lib/api/purchases";
 import { fetchPublicUser } from "@/lib/api/users";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { storage } from "@/lib/firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { ApiError } from "@/lib/apiClient";
@@ -87,6 +88,8 @@ export default function ItemDetailPage() {
   const TREE_CO2_KG_PER_YEAR = 10;
   const treeYears =
     data?.co2Kg != null ? Number((data.co2Kg / TREE_CO2_KG_PER_YEAR).toFixed(1)) : null;
+  const treePoints =
+    treeYears != null && treeYears > 0 ? Math.max(1, Math.round(treeYears)) : null;
   const [estimating, setEstimating] = useState(false);
   const [estimateMsg, setEstimateMsg] = useState<string | null>(null);
 
@@ -292,7 +295,7 @@ export default function ItemDetailPage() {
               itemId={Number(data.id)}
               price={data.price}
               treeYears={treeYears}
-              treePoints={treeYears}
+              treePoints={treePoints}
               sellerUid={data.sellerUid}
               purchase={activePurchase ?? null}
               itemStatus={data.status as any}
@@ -328,9 +331,19 @@ export default function ItemDetailPage() {
                     />
                     <input
                       type="number"
+                      min={100}
+                      step={1}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
                       value={price}
-                      onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "") {
+                          setPrice("");
+                          return;
+                        }
+                        const num = Math.max(100, Math.floor(Number(val)));
+                        setPrice(num);
+                      }}
                       placeholder="価格"
                     />
                     <select
@@ -373,7 +386,10 @@ export default function ItemDetailPage() {
                         {imageFile && <span className="text-xs text-slate-500">選択中: {imageFile.name}</span>}
                       </div>
                       {imagePreview && (
-                        <div className="h-32 w-32 overflow-hidden rounded-lg border border-slate-200">
+                        <div
+                          className="h-32 w-32 overflow-hidden rounded-lg border border-slate-200 cursor-zoom-in"
+                          onClick={() => setShowImageModal(true)}
+                        >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={imagePreview} alt="preview" className="h-full w-full object-cover" />
                         </div>
@@ -463,7 +479,13 @@ export default function ItemDetailPage() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={data.imageUrl && data.imageUrl.trim() !== "" ? data.imageUrl : fallbackImage}
+              src={
+                imagePreview
+                  ? imagePreview
+                  : data.imageUrl && data.imageUrl.trim() !== ""
+                    ? data.imageUrl
+                    : fallbackImage
+              }
               alt={data.title}
               className="max-h-[90vh] w-auto max-w-full object-contain"
             />
