@@ -170,7 +170,7 @@ export function AuthButton() {
         </span>
       )}
       <span className="sr-only">マイページ</span>
-      <span className="pointer-events-none absolute top-[120%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-900 px-2 py-1 text-xs font-semibold text-white opacity-0 shadow-sm transition duration-150 group-hover:top-[130%] group-hover:opacity-100 group-focus-visible:top-[130%] group-focus-visible:opacity-100">
+      <span className="pointer-events-none absolute top-[120%] left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-900 px-2 py-1 text-xs font-semibold text-white opacity-0 shadow-sm transition duration-150 group-hover:top-[130%] group-hover:opacity-100 group-focus-visible:top-[130%] group-focus-visible:opacity-100">
         マイページへ
       </span>
     </Link>

@@ -66,6 +66,10 @@ export async function updateItem(
   return apiClient.put<Item>(`/items/${id}`, payload);
 }
 
+export async function deleteItem(id: number | string) {
+  return apiClient.delete<void>(`/items/${id}`);
+}
+
 export async function estimateItemCO2(id: number | string) {
   return apiClient.post<{ co2Kg: number | null }>(`/items/${id}/estimate-co2`);
 }

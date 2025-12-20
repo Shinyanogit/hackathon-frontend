@@ -9,7 +9,7 @@ import { PurchasePanel } from "@/components/item/PurchasePanel";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useAuth } from "@/context/AuthContext";
 import { categories } from "@/constants/categories";
-import { estimateItemCO2, fetchItem, updateItem } from "@/lib/api/items";
+import { deleteItem, estimateItemCO2, fetchItem, updateItem } from "@/lib/api/items";
 import { fetchPurchase } from "@/lib/api/purchases";
 import { fetchPublicUser } from "@/lib/api/users";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -84,6 +84,8 @@ export default function ItemDetailPage() {
   };
 
   const isOwner = !!(user?.uid && data?.sellerUid === user.uid);
+  const isAdmin = !!(user?.email && user.email.toLowerCase() === "ymgtsny7@gmail.com");
+  const canEdit = isOwner || isAdmin;
   const isBuyer = !!(activePurchase && user?.uid && activePurchase.buyerUid === user.uid);
   const soldViewOnly = isSold && !isOwner && !isBuyer;
   const TREE_CO2_KG_PER_YEAR = 10;
@@ -151,7 +153,7 @@ export default function ItemDetailPage() {
   };
 
   const handleSave = async () => {
-    if (!isOwner || !id) return;
+    if (!canEdit || !id) return;
     setSaving(true);
     setMessage(null);
     try {
@@ -174,6 +176,22 @@ export default function ItemDetailPage() {
       setMessage("更新しました");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "更新に失敗しました";
+      setMessage(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!canEdit || !id) return;
+    if (!window.confirm("この商品を削除しますか？")) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      await deleteItem(id as string);
+      window.location.href = "/items";
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "削除に失敗しました";
       setMessage(msg);
     } finally {
       setSaving(false);
@@ -288,7 +306,7 @@ export default function ItemDetailPage() {
                 refetchPurchase();
               }}
             />
-            {isOwner && (
+            {canEdit && (
               <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-slate-900">出品内容を編集</p>
@@ -387,6 +405,14 @@ export default function ItemDetailPage() {
                         className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
                       >
                         保存する
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={saving}
+                        className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:text-red-700 disabled:cursor-not-allowed disabled:border-red-100 disabled:text-red-300"
+                      >
+                        削除する
                       </button>
                       <button
                         type="button"

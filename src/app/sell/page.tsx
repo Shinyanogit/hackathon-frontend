@@ -11,9 +11,13 @@ import { auth, storage } from "@/lib/firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { MobileFooterNav } from "@/components/layout/MobileFooterNav";
+import { useAuth } from "@/context/AuthContext";
+import { AuthButton } from "@/components/auth/AuthButton";
 
 export default function SellPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<number | "">("");
@@ -192,20 +196,38 @@ export default function SellPage() {
   return (
     <>
       <AppHeader hideSearch />
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 px-4 pb-24 pt-10 sm:px-6">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">出品を始める</h1>
-              <p className="text-sm text-slate-500">必要な情報を入力して商品を公開しましょう。</p>
-            </div>
-            <Link
-              href="/"
-              className="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
-            >
-              トップに戻る
-            </Link>
+      {loading ? (
+        <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 px-4 py-10 sm:px-6">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+            <div className="h-6 w-32 animate-pulse rounded-full bg-slate-100" />
+            <div className="h-40 animate-pulse rounded-2xl bg-slate-100" />
           </div>
+        </main>
+      ) : !user ? (
+        <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 px-4 py-10 sm:px-6">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <h1 className="text-xl font-bold text-slate-900">ログインが必要です</h1>
+            <p className="text-sm text-slate-600">出品を始めるにはログインしてください。</p>
+            <div className="flex gap-3">
+              <AuthButton />
+            </div>
+          </div>
+        </main>
+      ) : (
+        <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 px-4 pb-24 pt-10 sm:px-6">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">出品を始める</h1>
+                <p className="text-sm text-slate-500">必要な情報を入力して商品を公開しましょう。</p>
+              </div>
+              <Link
+                href="/"
+                className="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
+              >
+                トップに戻る
+              </Link>
+            </div>
 
         <form
           onSubmit={handleSubmit}
@@ -285,11 +307,11 @@ export default function SellPage() {
             <p className="text-xs text-slate-500">ジャンルを選択してください。API/DB に category_slug として保存されます。</p>
           </div>
 
-          <div className="space-y-3">
-            <label className="text-sm font-semibold text-slate-800" htmlFor="image-file">
-              画像 <span className="text-xs font-normal text-slate-500">(任意・画像ファイル推奨)</span>
-            </label>
-            <div
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-slate-800" htmlFor="image-file">
+                画像 <span className="text-xs font-normal text-slate-500">(任意・画像ファイル推奨)</span>
+              </label>
+              <div
               className={`flex flex-col gap-2 rounded-lg border border-dashed px-3 py-4 text-sm transition sm:flex-row sm:items-center ${
                 isDragging ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-slate-50"
               }`}
@@ -315,11 +337,11 @@ export default function SellPage() {
               </button>
             </div>
 
-            {aiResult && (
-              <div className="flex flex-wrap gap-2 text-xs text-slate-700">
-                <label className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1">
-                  <input
-                    type="radio"
+                {aiResult && (
+                  <div className="flex flex-wrap gap-2 text-xs text-slate-700">
+                    <label className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1">
+                      <input
+                        type="radio"
                     name="preview-version"
                     value="ai"
                     checked={selectedVersion === "ai"}
@@ -360,6 +382,26 @@ export default function SellPage() {
                   alt="Preview"
                   className="h-48 w-full object-cover"
                 />
+              </div>
+            )}
+
+            {(imagePreview || aiResult) && (
+              <div
+                className={`mt-2 flex flex-col gap-2 rounded-lg border border-dashed px-3 py-3 text-xs ${
+                  isDragging ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-slate-50"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <p className="font-semibold text-slate-700">別の写真に差し替える</p>
+                <p className="text-slate-500">
+                  ここにドラッグ＆ドロップ、または下のボタンから別の画像を選ぶと差し替えられます。
+                </p>
+                <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                  <span>画像を差し替える</span>
+                </label>
               </div>
             )}
           </div>
@@ -405,7 +447,6 @@ export default function SellPage() {
             {mutation.isPending ? "出品中..." : "出品する"}
           </button>
         </form>
-
         </div>
         {imageModalOpen && (imagePreview || aiResult) && (
           <div
@@ -432,6 +473,8 @@ export default function SellPage() {
           </div>
         )}
       </main>
+      )}
+      <MobileFooterNav />
     </>
   );
 }
